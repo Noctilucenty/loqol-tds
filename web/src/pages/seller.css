@@ -77,3 +77,14 @@
   .q-prompt { max-width: none; }
 }
 .none-note { margin-top: .35rem; }
+
+.confirm-value {
+  font-family: var(--serif);
+  font-size: clamp(1.15rem, 2.4vw, 1.5rem);
+  line-height: 1.35;
+  padding: 1.05rem 1.2rem;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brass);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}

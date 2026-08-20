@@ -350,15 +350,33 @@ def test_a_first_time_seller_sees_a_fresh_disclosure(client, seller_link):
     assert state["progress"]["answered"] == 0
 
 
+def test_confirming_the_address_asks_for_nothing_more(client, seller_link):
+    """It is a yes/no question, so Yes should cost one tap and open no input."""
+    token = seller_link["token"]
+    r = client.put(f"/api/s/{token}/answers", json={"question_id": "P.address_ok", "value": True})
+    assert r.status_code == 200
+    assert "P.address" not in r.json()["missingRequired"]
+
+
 def test_correcting_the_address_reaches_the_printed_form(client, seller_link):
     """The address is deal metadata; without a write-back the seller corrects it,
     is told it prints on all three pages, and it does not."""
     token = seller_link["token"]
+    client.put(f"/api/s/{token}/answers", json={"question_id": "P.address_ok", "value": False})
     client.put(f"/api/s/{token}/answers", json={
         "question_id": "P.address", "value": "999 Corrected Ave, Culver City, CA 90230",
     })
     review = client.get(f"/api/agent/deals/{seller_link['deal_id']}/review").json()
     assert review["deal"]["property_address"] == "999 Corrected Ave, Culver City, CA 90230"
+
+
+def test_the_correction_box_is_hidden_when_the_address_is_confirmed(client, seller_link):
+    """Answering a question that is not being asked must still be refused."""
+    token = seller_link["token"]
+    client.put(f"/api/s/{token}/answers", json={"question_id": "P.address_ok", "value": True})
+    r = client.put(f"/api/s/{token}/answers", json={
+        "question_id": "P.address", "value": "should not be accepted"})
+    assert r.status_code == 409
 
 
 def test_a_hard_flag_cannot_be_closed_by_re_confirming_the_same_answer(client, db, seller_link):

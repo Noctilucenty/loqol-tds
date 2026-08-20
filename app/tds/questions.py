@@ -200,17 +200,32 @@ QUESTIONS += [
 # -- Chapter: your property ------------------------------------------------
 QUESTIONS += [
     Question(
-        id="P.address",
+        id="P.address_ok",
         chapter="place",
         prompt="Is this the right property address?",
+        kind="bool",
+        lane=Lane.TAP,
+        why=Why.PRECISION,
+        explain=(
+            "Your agent entered this. It prints on all three pages of the form, so a "
+            "wrong digit is worth catching now."
+        ),
+        # Deliberately unbound. Confirming changes nothing; only a correction does,
+        # and that is the question below.
+        bindings=[],
+    ),
+    Question(
+        id="P.address",
+        chapter="place",
+        prompt="What is the correct address?",
         kind="text",
         lane=Lane.TAP,
         why=Why.PRECISION,
-        explain="Your agent entered this. Check it character by character - it prints on all three pages.",
-        # Deliberately unbound. The address is deal metadata, not an answer: it is
-        # written to the deal record and reaches all three page headers through
-        # roles.SYSTEM_FIELDS. Binding it here as well would give one value two
-        # owners, and they would drift the first time an agent corrected a typo.
+        depends_on="P.address_ok is false",
+        explain="Write it as it appears on the deed, including the unit number if there is one.",
+        # Unbound for the same reason as ever: the address is deal metadata and
+        # reaches all three page headers through roles.SYSTEM_FIELDS. Answering
+        # this updates the deal record itself.
         bindings=[],
     ),
     Question(

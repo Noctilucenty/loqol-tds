@@ -342,6 +342,12 @@ function QuestionStep({
         />
       )}
 
+      {question.id === "P.address_ok" && (
+        // The question asks about a specific address, so it has to be on screen.
+        // Reading it out of the small sticky header is not "checking" it.
+        <div className="confirm-value">{knownAddress}</div>
+      )}
+
       <Explain question={question} />
 
       <div className="q-answer">
@@ -355,6 +361,8 @@ function QuestionStep({
           // storing it made the disclosure look started before the seller had
           // opened it, and made their first correction look like a contradiction.
           answer={
+            // Start the correction box from what is on file, so they edit a
+            // digit rather than retype the whole thing.
             question.id === "P.address" && !answers[question.id] && knownAddress
               ? { value: knownAddress, status: "answered", source: "agent", revision: 0 }
               : answers[question.id]

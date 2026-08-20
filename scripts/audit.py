@@ -125,6 +125,7 @@ def main() -> int:
     step("a wrong-shaped value cannot brick the session",
          code == 200 and seller(f"/api/s/{token}/state")[0] == 200, f"got {code}")
 
+    seller(f"/api/s/{token}/answers", {"question_id": "P.address_ok", "value": False}, method="PUT")
     seller(f"/api/s/{token}/answers",
            {"question_id": "P.address", "value": "1250 Corrected Blvd, Culver City, CA 90230"},
            method="PUT")
@@ -176,7 +177,8 @@ def main() -> int:
 
     defaults = {"bool": False, "tri": "no", "multi": [], "single": None, "int": 0,
                 "text": "n/a", "longtext": "Nothing to add.", "date": ""}
-    special = {"P.address": ADDRESS, "P.occupying": "is", "A.water_heater": ["gas"],
+    special = {"P.address": ADDRESS, "P.address_ok": True, "P.occupying": "is",
+               "A.water_heater": ["gas"],
                "A.water_supply": ["city"], "A.gas_supply": ["utility"]}
     for _ in range(4):
         state = seller(f"/api/s/{token}/state")[1]
