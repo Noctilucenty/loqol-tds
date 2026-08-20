@@ -3,8 +3,12 @@ __pycache__/
 .venv/
 venv/
 .env
+# SQLite, including the WAL/SHM sidecars - `*.db` alone does not match them,
+# and in WAL mode the sidecar is where the actual rows live.
 *.db
+*.db-*
 *.sqlite3
+*.sqlite3-*
 node_modules/
 web/dist/
 app/static/
@@ -14,3 +18,5 @@ app/static/
 out/
 .env.local
 .render_key
+web/tsconfig.tsbuildinfo
+*.tsbuildinfo
