@@ -395,3 +395,24 @@ def test_an_agent_only_contradiction_does_not_trap_the_seller(client, db, seller
     result = client.post(f"/api/s/{token}/submit").json()
     blocking = {f["message"] for f in result.get("hardFlags", [])}
     assert not any("substituted" in m.lower() for m in blocking), blocking
+
+
+def test_a_frozen_disclosure_refuses_writes_that_would_change_nothing(client, db, seller_link):
+    """The guard must key off the disclosure's state, not off whether a write
+    happened to be needed. A group commit whose tiles are all answered writes
+    nothing, and used to return 200 against a document already out for
+    signature."""
+    token, sid = seller_link["token"], seller_link["session_id"]
+    client.put(f"/api/s/{token}/answers", json={"question_id": "A.oven", "value": True})
+
+    ds = db.get(DisclosureSession, sid)
+    ds.status = SessionStatus.SENT_FOR_SIGNATURE
+    db.commit()
+
+    # A.oven already has an answer, so this commit would write nothing at all.
+    r = client.post(f"/api/s/{token}/answers/commit-group", json={"questionIds": ["A.oven"]})
+    assert r.status_code == 409
+    assert client.post(f"/api/s/{token}/submit").status_code == 409
+
+    ds.status = SessionStatus.IN_PROGRESS
+    db.commit()

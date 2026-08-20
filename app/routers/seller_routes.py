@@ -36,6 +36,23 @@ def _session(token: str, request: Request, db: Session) -> DisclosureSession:
     return resolve_seller_token(db, token, request)
 
 
+def _assert_writable(ds: DisclosureSession) -> None:
+    """Refuse any write once the document has been sent for signature.
+
+    `write_answer` already guards this, but only when it actually writes. A
+    group commit whose tiles are all answered writes nothing, so it returned 200
+    on a frozen disclosure - telling the client a write succeeded against a
+    document that can no longer change. The state of the disclosure decides
+    whether a write is allowed, not whether one happened to be needed.
+    """
+    if ds.status in (SessionStatus.SENT_FOR_SIGNATURE, SessionStatus.COMPLETED):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "This disclosure has already been sent for signature and can no "
+            "longer be changed.",
+        )
+
+
 def _seller_may_answer(question_id: str, answers: dict) -> None:
     """The seller may only write questions their own flow actually asks.
 
@@ -130,6 +147,7 @@ def put_answer(
     each write.
     """
     ds = _session(token, request, db)
+    _assert_writable(ds)
     _seller_may_answer(body.question_id, answers_dict(db, ds.id))
 
     existing = db.scalar(
@@ -196,6 +214,7 @@ def commit_group(
     state under one transaction.
     """
     ds = _session(token, request, db)
+    _assert_writable(ds)
     ids = [qid for qid in (body.get("questionIds") or []) if qid in QUESTIONS_BY_ID]
     if not ids:
         return _state(db, ds)
@@ -235,6 +254,7 @@ def commit_group(
 def submit(token: str, request: Request, db: Session = Depends(get_db)):
     """Seller marks the disclosure complete and hands it to their agent."""
     ds = _session(token, request, db)
+    _assert_writable(ds)
     answers = answers_dict(db, ds.id)
     missing = unanswered_required(answers)
     # A hard flag about questions only the agent can answer must not trap the
@@ -276,6 +296,7 @@ def resolve_flag(
     normal path so it lands in the audit trail like any other answer.
     """
     ds = _session(token, request, db)
+    _assert_writable(ds)
     flag = db.get(Flag, flag_id)
     if flag is None or flag.session_id != ds.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Flag not found")
