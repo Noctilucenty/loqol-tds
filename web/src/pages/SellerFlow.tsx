@@ -6,7 +6,9 @@ import { VoicePanel } from "../components/VoicePanel";
 import { Explain } from "../components/Explain";
 import { Reconcile } from "../components/Reconcile";
 import { buildSteps, isAnswered, isVisible, stepIsComplete, type Step } from "../lib/gating";
-import type { SellerBootstrap, SellerState } from "../types";
+import type { AnswerRecord, SellerBootstrap, SellerState } from "../types";
+
+type AnswerMapT = Record<string, AnswerRecord>;
 import "./seller.css";
 
 type Save = "idle" | "saving" | "saved";
@@ -34,6 +36,29 @@ export function SellerFlow() {
   const lastKnown = useRef(0);
 
   const queue = useRef<Promise<unknown>>(Promise.resolve());
+
+  /** The assistant finished this section. Skip past every spoken question it
+   *  already answered, rather than landing on one that is now filled in.
+   *
+   *  Declared up here with the other hooks. A useCallback below the early
+   *  returns changes the hook count between renders and blanks the whole flow -
+   *  the same crash as before, which is why the smoke test now asserts that the
+   *  landing screen is gone AND something replaced it. */
+  const latest = useRef<{ steps: Step[]; answers: AnswerMapT }>({ steps: [], answers: {} });
+  const onVoiceFinished = useCallback(() => {
+    refreshRef.current?.();
+    setStepKey((currentKey) => {
+      const { steps: cur, answers: ans } = latest.current;
+      const from = cur.findIndex((s) => s.key === currentKey);
+      for (let i = Math.max(from, 0) + 1; i < cur.length; i += 1) {
+        const s = cur[i];
+        if (s.kind !== "question") return s.key;
+        if (!isAnswered(ans, s.question.id)) return s.key;
+      }
+      return cur[cur.length - 1]?.key ?? currentKey;
+    });
+  }, []);
+  const refreshRef = useRef<(() => void) | null>(null);
   const enqueue = useCallback(<T,>(job: () => Promise<T>): Promise<T> => {
     const run = queue.current.then(job, job);
     queue.current = run.catch(() => undefined);
@@ -124,6 +149,8 @@ export function SellerFlow() {
     }
   }, [token]);
 
+  refreshRef.current = refresh;
+
   if (error && !boot) return <SellerError message={error} />;
   if (!boot || !state || !form) return <SellerLoading />;
 
@@ -143,6 +170,8 @@ export function SellerFlow() {
   const found = steps.findIndex((s) => s.key === stepKey);
   if (found >= 0) lastKnown.current = found;
   const index = found >= 0 ? found : Math.min(lastKnown.current, Math.max(steps.length - 1, 0));
+  latest.current = { steps, answers };
+
   const step = steps[Math.min(index, steps.length - 1)];
 
   // How far through the spoken questions the seller is, so the panel can show a
@@ -160,22 +189,6 @@ export function SellerFlow() {
    *  The whole group is handed to the server, which decides which are actually
    *  unanswered. Filtering here against the optimistic local copy would race a
    *  tap that has not round-tripped yet and overwrite it with false. */
-  /** The assistant said it is done with this section. Move past every spoken
-   *  question it already answered, rather than one step onto a question that is
-   *  now filled in. */
-  const onVoiceFinished = useCallback(() => {
-    refresh();
-    setStepKey((currentKey) => {
-      const from = steps.findIndex((s) => s.key === currentKey);
-      for (let i = Math.max(from, 0) + 1; i < steps.length; i += 1) {
-        const s = steps[i];
-        if (s.kind !== "question") return s.key;
-        if (!isAnswered(answers, s.question.id)) return s.key;
-      }
-      return steps[steps.length - 1]?.key ?? currentKey;
-    });
-  }, [refresh, steps, answers]);
-
   const advance = () => {
     const current = step;
     const next = steps[Math.min(index + 1, steps.length - 1)];
