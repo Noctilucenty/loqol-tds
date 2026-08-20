@@ -1,0 +1,38 @@
+.explain { margin-top: -.35rem; }
+
+.explain-toggle {
+  display: inline-flex; align-items: center; gap: .5rem;
+  background: none; border: none; padding: .15rem 0;
+  color: var(--brass-deep); font-size: .9rem; font-weight: 500;
+  border-bottom: 1px solid transparent; transition: border-color 140ms var(--ease);
+}
+.explain-toggle:hover { border-bottom-color: var(--brass); }
+.explain-glyph {
+  width: 18px; height: 18px; border-radius: 999px; flex: none;
+  display: grid; place-items: center;
+  background: var(--brass-wash); color: var(--brass-deep);
+  font-size: .72rem; font-weight: 700;
+}
+
+.explain-body {
+  background: var(--paper-sunk);
+  border-left: 2px solid var(--brass);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  padding: .95rem 1.1rem;
+}
+.explain-text { margin: 0 0 .7rem; color: var(--ink-soft); font-size: .95rem; line-height: 1.6; }
+.explain-example { display: flex; flex-direction: column; gap: .2rem; margin: 0 0 .7rem; }
+.explain-example span:last-child {
+  font-family: var(--serif); font-size: 1rem; color: var(--ink); line-height: 1.5;
+}
+.explain-legal { margin-bottom: .55rem; }
+.explain-legal-text {
+  margin: .25rem 0 0; font-size: .82rem; line-height: 1.55;
+  color: var(--ink-mute); font-family: var(--sans);
+}
+.explain-link {
+  background: none; border: none; padding: 0;
+  color: var(--ink-mute); font-size: .82rem; text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.explain-link:hover { color: var(--ink); }

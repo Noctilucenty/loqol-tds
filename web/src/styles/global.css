@@ -1,0 +1,235 @@
+/* Loqol disclosures - design tokens.
+
+   The reference points are estate-agency print rather than dashboard SaaS:
+   warm paper, a high-contrast serif for anything that speaks, a quiet grotesque
+   for anything that labels, hairline rules instead of boxes, and one restrained
+   metallic accent. Radii stay small; nothing is a pill except a status chip.
+
+   The seller is doing paperwork they are dreading. Calm, unhurried and
+   expensive-feeling is the brief - not friendly, not gamified. */
+
+:root {
+  --ink: #14160f;
+  --ink-soft: #3d4139;
+  --ink-mute: #6f7469;
+  --ink-faint: #9aa093;
+
+  --paper: #f6f3ec;
+  --paper-raised: #fbf9f4;
+  --paper-sunk: #efeae0;
+  --white: #ffffff;
+
+  --brass: #9a7b4f;
+  --brass-deep: #7d6340;
+  --brass-wash: #f0e7d8;
+
+  --sage: #3a5a4c;
+  --sage-wash: #e4ece6;
+  --clay: #a24f34;
+  --clay-wash: #f7e6df;
+
+  --line: #ddd7ca;
+  --line-soft: #e8e3d8;
+  --line-strong: #c6bfae;
+
+  --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 14px;
+
+  --shadow-sm: 0 1px 2px rgba(20, 22, 15, 0.05);
+  --shadow-md: 0 2px 10px rgba(20, 22, 15, 0.06), 0 1px 2px rgba(20, 22, 15, 0.04);
+  --shadow-lg: 0 18px 48px rgba(20, 22, 15, 0.12), 0 2px 8px rgba(20, 22, 15, 0.05);
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --max: 1180px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-variation-settings: "SOFT" 0, "WONK" 0;
+  letter-spacing: -0.015em;
+  line-height: 1.14;
+  margin: 0;
+  color: var(--ink);
+}
+
+h1 { font-size: clamp(2rem, 4.4vw, 3.05rem); }
+h2 { font-size: clamp(1.5rem, 2.7vw, 2.05rem); }
+h3 { font-size: 1.22rem; }
+
+p { margin: 0 0 1rem; }
+a { color: inherit; }
+
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+
+::selection { background: var(--brass-wash); }
+
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* ---------- primitives ---------- */
+
+.eyebrow {
+  font-family: var(--sans);
+  font-size: 0.688rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.lede {
+  font-size: 1.06rem;
+  color: var(--ink-soft);
+  max-width: 58ch;
+}
+
+.muted { color: var(--ink-mute); }
+.small { font-size: 0.875rem; }
+.tiny { font-size: 0.78rem; }
+
+.rule { height: 1px; background: var(--line); border: 0; margin: 0; }
+
+.card {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.72rem 1.3rem;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  font-size: 0.938rem;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  transition: background 160ms var(--ease), color 160ms var(--ease),
+              border-color 160ms var(--ease), transform 120ms var(--ease),
+              box-shadow 160ms var(--ease);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: 0.42; cursor: not-allowed; }
+
+.btn-primary { background: var(--ink); color: var(--paper); }
+.btn-primary:hover:not(:disabled) { background: #22261c; box-shadow: var(--shadow-md); }
+
+.btn-brass { background: var(--brass); color: #fff; }
+.btn-brass:hover:not(:disabled) { background: var(--brass-deep); }
+
+.btn-ghost { background: transparent; color: var(--ink-soft); border-color: var(--line-strong); }
+.btn-ghost:hover:not(:disabled) { background: var(--paper-sunk); color: var(--ink); }
+
+.btn-quiet { background: transparent; color: var(--ink-mute); padding: 0.4rem 0.6rem; }
+.btn-quiet:hover:not(:disabled) { color: var(--ink); background: var(--paper-sunk); }
+
+.btn-lg { padding: 0.92rem 1.7rem; font-size: 1rem; }
+.btn-block { width: 100%; }
+
+/* ---------- fields ---------- */
+
+.field { display: block; margin-bottom: 1.05rem; }
+.field > label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-bottom: 0.38rem;
+}
+
+.input {
+  width: 100%;
+  padding: 0.72rem 0.9rem;
+  background: var(--white);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  transition: border-color 140ms var(--ease), box-shadow 140ms var(--ease);
+}
+.input::placeholder { color: var(--ink-faint); }
+.input:focus {
+  outline: none;
+  border-color: var(--brass);
+  box-shadow: 0 0 0 3px rgba(154, 123, 79, 0.16);
+}
+textarea.input { resize: vertical; min-height: 118px; line-height: 1.6; }
+
+/* ---------- chips ---------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.62rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-strong);
+  color: var(--ink-mute);
+  background: var(--paper-sunk);
+}
+.chip-sage { background: var(--sage-wash); color: var(--sage); border-color: transparent; }
+.chip-brass { background: var(--brass-wash); color: var(--brass-deep); border-color: transparent; }
+.chip-clay { background: var(--clay-wash); color: var(--clay); border-color: transparent; }
+
+/* ---------- layout ---------- */
+
+.shell { min-height: 100%; display: flex; flex-direction: column; }
+.wrap { width: 100%; max-width: var(--max); margin: 0 auto; padding: 0 1.5rem; }
+.wrap-narrow { max-width: 760px; }
+
+.stack > * + * { margin-top: var(--gap, 1rem); }
+.row { display: flex; align-items: center; gap: 0.75rem; }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.spread { flex: 1; }
+
+@media (max-width: 640px) {
+  .wrap { padding: 0 1.15rem; }
+}
+
+/* ---------- motion ---------- */
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.rise { animation: rise 380ms var(--ease) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

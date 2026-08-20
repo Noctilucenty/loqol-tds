@@ -1,0 +1,21 @@
+.rec {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 1.25rem 1.35rem;
+}
+.rec-hard { border-left: 3px solid var(--clay); }
+.rec-soft { border-left: 3px solid var(--brass); }
+.rec-open { border-left: 3px solid var(--brass); }
+
+.rec-head { margin-bottom: .75rem; }
+.rec-q {
+  font-family: var(--serif); font-size: 1.16rem; line-height: 1.4;
+  margin: 0 0 .5rem; color: var(--ink);
+}
+.rec-detail { margin: 0; }
+.rec-fix { margin-top: 1.05rem; }
+.rec-fix-label { margin-bottom: .45rem; }
+.rec-missing { margin: .5rem 0 0; padding-left: 1.1rem; color: var(--ink-soft); font-size: .92rem; }
+.rec-missing li { margin-bottom: .2rem; }
+.rec-submit { padding-top: .5rem; }
