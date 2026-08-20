@@ -1,0 +1,2420 @@
+[
+ {
+  "page": 1,
+  "name": "PropertyTypeDuplexTriplexFourplex",
+  "ft": "/Btn",
+  "rect": [
+   38.3,
+   712.8,
+   45.2,
+   718.3
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "OnlyUnits",
+  "ft": "/Btn",
+  "rect": [
+   413.6,
+   713.3,
+   421.2,
+   718.3
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "InspectionReportsYes",
+  "ft": "/Btn",
+  "rect": [
+   55.1,
+   525.1,
+   61.7,
+   531.4
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "AdditionalInspectionReportsYes",
+  "ft": "/Btn",
+  "rect": [
+   55.1,
+   512.2,
+   61.7,
+   518.4
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "NoSubstitutedDisclosures",
+  "ft": "/Btn",
+  "rect": [
+   55.1,
+   480.6,
+   61.7,
+   486.8
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "ListAdditionalInspectionReports",
+  "ft": "/Tx",
+  "rect": [
+   224.3,
+   511.2,
+   575.4,
+   520.8
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "SellerIsOccupying",
+  "ft": "/Btn",
+  "rect": [
+   68.3,
+   376.9,
+   74.3,
+   382.6
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "SellerNotOccupying",
+  "ft": "/Btn",
+  "rect": [
+   88.8,
+   376.9,
+   94.8,
+   382.6
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Range",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   350.6,
+   43.4,
+   356.9
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Oven",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   339.8,
+   43.4,
+   346.1
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Microwave",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   329.4,
+   43.4,
+   335.6
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Dishwasher",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   318.8,
+   43.4,
+   325.1
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "TrashCompactor",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   308.4,
+   43.4,
+   314.6
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "GarbageDisposal",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   297.8,
+   43.4,
+   304.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "WasherDryerHookups",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   287.4,
+   43.4,
+   293.6
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "RainGutters",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   276.8,
+   43.4,
+   283.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "BurglarAlarms",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   266.3,
+   43.4,
+   272.5
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "CarbonMonoxideDevices",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   255.8,
+   43.4,
+   262.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "SmokeDetectors",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   245.3,
+   43.4,
+   251.5
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "FireAlarm",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   234.8,
+   43.4,
+   241.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "TVAntenna",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   224.3,
+   43.4,
+   230.5
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "SatelliteDish",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   213.8,
+   43.4,
+   220.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Intercom",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   203.3,
+   43.4,
+   209.5
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "CentralHeating",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   192.8,
+   43.4,
+   199.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "CentralAirConditioning",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   182.3,
+   43.4,
+   188.5
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "EvaporatorCoolers",
+  "ft": "/Btn",
+  "rect": [
+   36.7,
+   171.8,
+   43.4,
+   178.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "WallWindowAirConditioning",
+  "ft": "/Btn",
+  "rect": [
+   238.6,
+   352.8,
+   245.3,
+   359.0
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Sprinklers",
+  "ft": "/Btn",
+  "rect": [
+   220.6,
+   342.1,
+   227.3,
+   348.4
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "PublicSewerSystem",
+  "ft": "/Btn",
+  "rect": [
+   220.6,
+   331.6,
+   227.3,
+   337.8
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "SepticTank",
+  "ft": "/Btn",
+  "rect": [
+   220.6,
+   321.1,
+   227.3,
+   327.4
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "SumpPump",
+  "ft": "/Btn",
+  "rect": [
+   220.6,
+   310.6,
+   227.3,
+   316.8
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "WaterSoftener",
+  "ft": "/Btn",
+  "rect": [
+   220.6,
+   300.1,
+   227.3,
+   306.4
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "PatioDecking",
+  "ft": "/Btn",
+  "rect": [
+   220.6,
+   289.6,
+   227.3,
+   295.8
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "BuiltinBarbecue",
+  "ft": "/Btn",
+  "rect": [
+   220.6,
+   279.1,
+   227.3,
+   285.4
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Gazebo",
+  "ft": "/Btn",
+  "rect": [
+   220.6,
+   268.6,
+   227.3,
+   274.8
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "SecurityGates",
+  "ft": "/Btn",
+  "rect": [
+   220.6,
+   258.1,
+   227.3,
+   264.4
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Garage",
+  "ft": "/Btn",
+  "rect": [
+   220.6,
+   247.6,
+   227.3,
+   253.8
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Sauna",
+  "ft": "/Btn",
+  "rect": [
+   220.6,
+   184.6,
+   227.3,
+   190.8
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "HotTubSpa",
+  "ft": "/Btn",
+  "rect": [
+   220.6,
+   174.0,
+   227.3,
+   180.2
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "ChildResistantBarrier",
+  "ft": "/Btn",
+  "rect": [
+   422.2,
+   339.8,
+   428.8,
+   346.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "PoolSpaHeater",
+  "ft": "/Btn",
+  "rect": [
+   404.2,
+   329.4,
+   410.8,
+   335.6
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Gas",
+  "ft": "/Btn",
+  "rect": [
+   424.9,
+   318.8,
+   431.5,
+   325.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Solar",
+  "ft": "/Btn",
+  "rect": [
+   463.0,
+   318.8,
+   469.6,
+   325.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Electric",
+  "ft": "/Btn",
+  "rect": [
+   508.1,
+   319.1,
+   514.0,
+   324.4
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Gas2",
+  "ft": "/Btn",
+  "rect": [
+   422.2,
+   297.8,
+   428.8,
+   304.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Solar",
+  "ft": "/Btn",
+  "rect": [
+   461.0,
+   297.8,
+   467.6,
+   304.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Electric2",
+  "ft": "/Btn",
+  "rect": [
+   495.4,
+   297.8,
+   502.2,
+   304.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "City",
+  "ft": "/Btn",
+  "rect": [
+   406.2,
+   276.8,
+   412.8,
+   283.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Well",
+  "ft": "/Btn",
+  "rect": [
+   443.2,
+   276.8,
+   449.8,
+   283.1
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "PrivateUtility",
+  "ft": "/Btn",
+  "rect": [
+   422.2,
+   266.3,
+   428.8,
+   272.5
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "UtilityOther",
+  "ft": "/Tx",
+  "rect": [
+   472.0,
+   255.9,
+   572.4,
+   264.5
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "NoAttachedGarage",
+  "ft": "/Btn",
+  "rect": [
+   305.8,
+   237.1,
+   312.6,
+   243.4
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Utility",
+  "ft": "/Btn",
+  "rect": [
+   422.2,
+   234.8,
+   428.8,
+   241.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "BottledTank",
+  "ft": "/Btn",
+  "rect": [
+   457.7,
+   234.8,
+   464.3,
+   241.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Attached",
+  "ft": "/Btn",
+  "rect": [
+   238.6,
+   237.1,
+   245.3,
+   243.4
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Carport",
+  "ft": "/Btn",
+  "rect": [
+   238.6,
+   226.1,
+   245.3,
+   232.4
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "AutomaticGarageDoorOpeners",
+  "ft": "/Btn",
+  "rect": [
+   238.6,
+   214.6,
+   245.3,
+   220.8
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "WindowScreens",
+  "ft": "/Btn",
+  "rect": [
+   404.2,
+   224.3,
+   410.8,
+   230.5
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "WindowSecurityBars",
+  "ft": "/Btn",
+  "rect": [
+   404.2,
+   211.6,
+   410.8,
+   217.8
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "WaterConservingPlumbingFixtures",
+  "ft": "/Btn",
+  "rect": [
+   404.2,
+   177.0,
+   410.8,
+   183.2
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "QuickReleaseWindows",
+  "ft": "/Btn",
+  "rect": [
+   422.2,
+   199.3,
+   428.8,
+   205.6
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "RemoteControlsYes",
+  "ft": "/Btn",
+  "rect": [
+   250.3,
+   195.0,
+   257.0,
+   201.2
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "NumberRemoteControlsDigit",
+  "ft": "/Tx",
+  "rect": [
+   362.6,
+   194.0,
+   391.6,
+   203.6
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "LockingSafetyCover",
+  "ft": "/Btn",
+  "rect": [
+   238.6,
+   163.6,
+   245.3,
+   169.8
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "GasStarter",
+  "ft": "/Btn",
+  "rect": [
+   37.1,
+   122.8,
+   43.7,
+   129.0
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "KnowledgeYes",
+  "ft": "/Btn",
+  "rect": [
+   37.1,
+   89.3,
+   43.7,
+   95.5
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "Roofs",
+  "ft": "/Btn",
+  "rect": [
+   163.3,
+   122.8,
+   169.9,
+   129.0
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "220VoltWiringRooms",
+  "ft": "/Tx",
+  "rect": [
+   271.5,
+   131.3,
+   379.5,
+   141.2
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "FireplaceRooms",
+  "ft": "/Tx",
+  "rect": [
+   445.0,
+   131.6,
+   563.2,
+   141.2
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "KnowledgeNo",
+  "ft": "/Btn",
+  "rect": [
+   90.3,
+   89.3,
+   96.9,
+   95.5
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "YesNotWorkingDescription",
+  "ft": "/Tx",
+  "rect": [
+   348.1,
+   88.3,
+   575.2,
+   97.9
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "BuyersInitialsPage1",
+  "ft": "/Tx",
+  "rect": [
+   92.2,
+   41.5,
+   137.5,
+   51.1
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "BuyersDatePage1",
+  "ft": "/Tx",
+  "rect": [
+   142.6,
+   41.5,
+   187.3,
+   51.1
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 1,
+  "name": "SellersDatePage1",
+  "ft": "/Tx",
+  "rect": [
+   448.6,
+   42.2,
+   493.3,
+   51.8
+  ],
+  "states": null
+ },
+ {
+  "page": 1,
+  "name": "UnitsNumber",
+  "ft": "/Tx",
+  "rect": [
+   466.2,
+   711.9,
+   483.2,
+   725.5
+  ],
+  "states": null
+ },
+ {
+  "page": 1,
+  "name": "ExhaustFanRooms",
+  "ft": "/Tx",
+  "rect": [
+   109.5,
+   132.9,
+   191.6,
+   142.8
+  ],
+  "states": null
+ },
+ {
+  "page": 1,
+  "name": "SellersInitialsPage1",
+  "ft": "/Tx",
+  "rect": [
+   398.2,
+   42.2,
+   443.5,
+   51.8
+  ],
+  "states": null
+ },
+ {
+  "page": 1,
+  "name": "PropertyAddress",
+  "ft": "/Tx",
+  "rect": [
+   78.2,
+   764.5,
+   425.1,
+   775.3
+  ],
+  "states": null
+ },
+ {
+  "page": 1,
+  "name": "Date",
+  "ft": "/Tx",
+  "rect": [
+   449.6,
+   765.0,
+   537.0,
+   774.9
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Date",
+  "ft": "/Tx",
+  "rect": [
+   486.0,
+   763.2,
+   573.4,
+   773.0
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "DefectsYes",
+  "ft": "/Btn",
+  "rect": [
+   412.4,
+   747.2,
+   419.0,
+   753.5
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "DefectsNo",
+  "ft": "/Btn",
+  "rect": [
+   444.1,
+   747.2,
+   450.8,
+   753.5
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "InteriorWalls",
+  "ft": "/Btn",
+  "rect": [
+   55.3,
+   721.0,
+   61.9,
+   727.2
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Ceilings",
+  "ft": "/Btn",
+  "rect": [
+   125.8,
+   721.0,
+   132.5,
+   727.2
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Floors",
+  "ft": "/Btn",
+  "rect": [
+   172.8,
+   721.0,
+   179.5,
+   727.2
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "ExteriorWalls",
+  "ft": "/Btn",
+  "rect": [
+   212.4,
+   721.0,
+   219.0,
+   727.2
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Insulation",
+  "ft": "/Btn",
+  "rect": [
+   283.1,
+   721.0,
+   289.8,
+   727.2
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Roofs2",
+  "ft": "/Btn",
+  "rect": [
+   336.8,
+   721.0,
+   343.6,
+   727.2
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Windows",
+  "ft": "/Btn",
+  "rect": [
+   381.1,
+   721.0,
+   387.8,
+   727.2
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Doors",
+  "ft": "/Btn",
+  "rect": [
+   432.7,
+   721.0,
+   439.3,
+   727.2
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Foundation",
+  "ft": "/Btn",
+  "rect": [
+   471.2,
+   721.0,
+   477.8,
+   727.2
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Slabs",
+  "ft": "/Btn",
+  "rect": [
+   531.7,
+   721.0,
+   538.3,
+   727.2
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Driveways",
+  "ft": "/Btn",
+  "rect": [
+   73.1,
+   706.2,
+   79.7,
+   712.4
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Sidewalks",
+  "ft": "/Btn",
+  "rect": [
+   133.1,
+   706.2,
+   139.7,
+   712.4
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "WallsFences",
+  "ft": "/Btn",
+  "rect": [
+   187.8,
+   706.2,
+   194.5,
+   712.4
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Electrical Systems",
+  "ft": "/Btn",
+  "rect": [
+   256.8,
+   706.2,
+   263.5,
+   712.4
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "PlumbingSewersSeptics",
+  "ft": "/Btn",
+  "rect": [
+   345.6,
+   706.2,
+   352.3,
+   712.4
+  ],
+  "states": [
+   "/Off",
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Other2",
+  "ft": "/Btn",
+  "rect": [
+   460.9,
+   706.2,
+   467.6,
+   712.4
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Other2Describe",
+  "ft": "/Tx",
+  "rect": [
+   493.4,
+   705.2,
+   571.1,
+   715.1
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Other2Describe",
+  "ft": "/Tx",
+  "rect": [
+   37.3,
+   683.3,
+   570.0,
+   693.1
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Describe1",
+  "ft": "/Tx",
+  "rect": [
+   354.6,
+   672.7,
+   568.3,
+   682.3
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Describe2",
+  "ft": "/Tx",
+  "rect": [
+   37.2,
+   662.2,
+   572.6,
+   671.9
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Describe3",
+  "ft": "/Tx",
+  "rect": [
+   37.2,
+   651.1,
+   572.6,
+   661.0
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "AwareHazardsYes",
+  "ft": "/Btn",
+  "rect": [
+   523.2,
+   481.3,
+   529.5,
+   488.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "AwareHazardsNo",
+  "ft": "/Btn",
+  "rect": [
+   552.7,
+   482.6,
+   558.1,
+   487.7
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "SharedYes",
+  "ft": "/Btn",
+  "rect": [
+   522.8,
+   456.3,
+   528.3,
+   462.2
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "SharedNo",
+  "ft": "/Btn",
+  "rect": [
+   550.0,
+   457.4,
+   555.4,
+   462.5
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "IfYesExplain1",
+  "ft": "/Tx",
+  "rect": [
+   367.9,
+   150.4,
+   575.6,
+   160.2
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "IfYesExplain2",
+  "ft": "/Tx",
+  "rect": [
+   37.2,
+   139.6,
+   572.6,
+   149.4
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "IfYesExplain3",
+  "ft": "/Tx",
+  "rect": [
+   37.2,
+   128.6,
+   572.6,
+   138.5
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "IfYesExplain4",
+  "ft": "/Tx",
+  "rect": [
+   37.2,
+   117.6,
+   572.6,
+   127.4
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "IfYesExplain5",
+  "ft": "/Tx",
+  "rect": [
+   37.2,
+   106.6,
+   572.6,
+   116.4
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "PropertyAddress",
+  "ft": "/Tx",
+  "rect": [
+   111.3,
+   764.2,
+   458.2,
+   774.9
+  ],
+  "states": null
+ },
+ {
+  "page": 2,
+  "name": "AffectedInterestYes",
+  "ft": "/Btn",
+  "rect": [
+   523.8,
+   443.1,
+   530.5,
+   449.2
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "AffectedInterestNo",
+  "ft": "/Btn",
+  "rect": [
+   552.6,
+   443.0,
+   558.0,
+   448.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "RoomAdditionsYes",
+  "ft": "/Btn",
+  "rect": [
+   523.5,
+   427.4,
+   529.5,
+   433.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "RoomAdditionsNo",
+  "ft": "/Btn",
+  "rect": [
+   552.6,
+   427.0,
+   558.0,
+   432.0
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "RoomAdditionsCodeYes",
+  "ft": "/Btn",
+  "rect": [
+   523.5,
+   412.7,
+   528.9,
+   417.7
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "RoomAdditionsCodeNo",
+  "ft": "/Btn",
+  "rect": [
+   552.9,
+   412.6,
+   558.3,
+   417.6
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "FillYes",
+  "ft": "/Btn",
+  "rect": [
+   524.5,
+   397.0,
+   530.5,
+   403.0
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "FillNo",
+  "ft": "/Btn",
+  "rect": [
+   553.6,
+   396.9,
+   559.0,
+   401.9
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "SettlingYes",
+  "ft": "/Btn",
+  "rect": [
+   524.2,
+   383.6,
+   531.2,
+   389.3
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "SettlingNo",
+  "ft": "/Btn",
+  "rect": [
+   553.2,
+   382.2,
+   558.6,
+   387.2
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "FloodingYes",
+  "ft": "/Btn",
+  "rect": [
+   524.1,
+   367.8,
+   530.8,
+   372.9
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "FloodingNo",
+  "ft": "/Btn",
+  "rect": [
+   553.9,
+   367.8,
+   559.3,
+   372.8
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "DamageYes",
+  "ft": "/Btn",
+  "rect": [
+   524.5,
+   352.5,
+   530.2,
+   357.8
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "DamageNo",
+  "ft": "/Btn",
+  "rect": [
+   553.2,
+   352.7,
+   558.6,
+   357.8
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "ZoningYes",
+  "ft": "/Btn",
+  "rect": [
+   523.8,
+   337.7,
+   530.2,
+   343.1
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "ZoningNo",
+  "ft": "/Btn",
+  "rect": [
+   554.2,
+   338.0,
+   559.6,
+   343.0
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "NoiseYes",
+  "ft": "/Btn",
+  "rect": [
+   524.4,
+   323.0,
+   530.5,
+   328.0
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "NoiseNo",
+  "ft": "/Btn",
+  "rect": [
+   554.5,
+   322.9,
+   559.9,
+   328.0
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "CCRYes",
+  "ft": "/Btn",
+  "rect": [
+   524.1,
+   307.9,
+   529.8,
+   313.3
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "CCRNo",
+  "ft": "/Btn",
+  "rect": [
+   554.9,
+   308.2,
+   560.3,
+   313.2
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "HOAAuthorityYes",
+  "ft": "/Btn",
+  "rect": [
+   523.5,
+   293.2,
+   529.5,
+   298.3
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "HOAAuthorityNo",
+  "ft": "/Btn",
+  "rect": [
+   553.6,
+   293.1,
+   559.0,
+   298.2
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "CommonYes",
+  "ft": "/Btn",
+  "rect": [
+   526.8,
+   267.4,
+   532.8,
+   272.8
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "CommonNo",
+  "ft": "/Btn",
+  "rect": [
+   554.9,
+   266.6,
+   560.3,
+   271.7
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "AbatementYes",
+  "ft": "/Btn",
+  "rect": [
+   524.1,
+   253.3,
+   530.5,
+   258.7
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "AbatementNo",
+  "ft": "/Btn",
+  "rect": [
+   554.5,
+   252.6,
+   559.9,
+   257.6
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "LawsuitsNo",
+  "ft": "/Btn",
+  "rect": [
+   553.6,
+   176.3,
+   559.0,
+   181.4
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "LawsuitsYes",
+  "ft": "/Btn",
+  "rect": [
+   524.5,
+   175.3,
+   530.5,
+   181.4
+  ],
+  "states": [
+   "/On"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Buyers Initials_2",
+  "ft": "/Tx",
+  "rect": [
+   437.1,
+   31.1,
+   482.4,
+   39.3
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Date3_af_date",
+  "ft": "/Tx",
+  "rect": [
+   488.2,
+   31.1,
+   533.5,
+   40.0
+  ],
+  "states": null
+ },
+ {
+  "page": 2,
+  "name": "Sellers Initials",
+  "ft": "/Tx",
+  "rect": [
+   32.7,
+   15.0,
+   78.1,
+   23.1
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 2,
+  "name": "Date_3",
+  "ft": "/Tx",
+  "rect": [
+   89.3,
+   15.0,
+   119.2,
+   23.1
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Property Address_2",
+  "ft": "/Tx",
+  "rect": [
+   111.8,
+   763.2,
+   458.0,
+   776.6
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Date_4",
+  "ft": "/Tx",
+  "rect": [
+   486.0,
+   763.2,
+   573.4,
+   776.6
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Date_5",
+  "ft": "/Tx",
+  "rect": [
+   434.4,
+   719.3,
+   574.3,
+   732.7
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Date_6",
+  "ft": "/Tx",
+  "rect": [
+   438.7,
+   702.2,
+   574.3,
+   715.7
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Seller_3",
+  "ft": "/Tx",
+  "rect": [
+   60.0,
+   283.6,
+   215.5,
+   297.0
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Date_9",
+  "ft": "/Tx",
+  "rect": [
+   236.6,
+   283.6,
+   300.0,
+   297.0
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Buyer",
+  "ft": "/Tx",
+  "rect": [
+   327.1,
+   283.6,
+   486.6,
+   297.0
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Date_10",
+  "ft": "/Tx",
+  "rect": [
+   505.1,
+   283.6,
+   571.3,
+   297.0
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Seller_4",
+  "ft": "/Tx",
+  "rect": [
+   60.0,
+   267.4,
+   215.5,
+   280.8
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Date_11",
+  "ft": "/Tx",
+  "rect": [
+   236.6,
+   267.4,
+   300.0,
+   280.8
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Buyer_2",
+  "ft": "/Tx",
+  "rect": [
+   327.1,
+   267.4,
+   486.6,
+   280.8
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Date_12",
+  "ft": "/Tx",
+  "rect": [
+   505.1,
+   267.4,
+   571.3,
+   280.8
+  ],
+  "states": [
+   "/BBox",
+   "/FormType",
+   "/Matrix",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Signature4",
+  "ft": "/Sig",
+  "rect": [
+   62.2,
+   718.4,
+   245.2,
+   728.5
+  ],
+  "states": [
+   "/BBox",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ },
+ {
+  "page": 3,
+  "name": "Signature5",
+  "ft": "/Sig",
+  "rect": [
+   61.2,
+   702.7,
+   247.9,
+   712.8
+  ],
+  "states": [
+   "/BBox",
+   "/Resources",
+   "/Subtype",
+   "/Type"
+  ]
+ }
+]
