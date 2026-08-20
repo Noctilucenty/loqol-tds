@@ -1,5 +1,9 @@
 # Deploying
 
+Currently live at **https://loqol-tds.onrender.com** (Render free tier, Oregon,
+Docker runtime, free Postgres). Free instances sleep after inactivity, so the
+first request after an idle spell takes around 30 seconds.
+
 One service. The React app is built into `app/static` at build time and served by
 the same FastAPI process, so there is no CORS to configure and no second origin
 to secure.

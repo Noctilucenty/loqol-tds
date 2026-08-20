@@ -3,7 +3,8 @@
 A web app that interviews a home seller and turns their answers into a completed,
 signable California Transfer Disclosure Statement.
 
-- **Live:** _see DEPLOY.md_
+- **Live:** https://loqol-tds.onrender.com  
+  (free Render instance — the first request after an idle spell takes ~30s to wake)
 - **Design notes** (the routing decision, generated from the live form spec): `/design`
 - **Demo agent login:** `agent@loqol.ai` / `disclosure-demo-1`, or the "Use the demo
   account" button on the sign-in page.
