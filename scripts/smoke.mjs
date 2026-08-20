@@ -26,7 +26,13 @@ const step = (name, ok, detail = "") => {
 };
 
 const browser = await chromium.launch();
-const ctx = await browser.newContext({ viewport: { width: 1280, height: 950 } });
+const ctx = await browser.newContext({
+  viewport: { width: 1280, height: 950 },
+  // The stylesheet honours prefers-reduced-motion, so this switches off the
+  // entrance animations. Without it Playwright's click-stability check races
+  // an element that is still sliding into place and fails intermittently.
+  reducedMotion: "reduce",
+});
 const page = await ctx.newPage();
 
 const pageErrors = [];
@@ -45,13 +51,17 @@ await page.getByRole("button", { name: /Try it without signing up/ }).click();
 await page.waitForURL("**/agent", { timeout: 30000 });
 step("demo workspace signs in", true);
 
+// Wait on the element, never on a stopwatch. The deal page loads two requests
+// before it renders, and a fixed sleep turns a slow instance into a red build.
 await page.locator("a.deal").first().click();
-await page.waitForTimeout(1500);
-step("deal detail renders", (await page.locator("h1").count()) > 0);
-step("Section I editor is present", (await page.getByText("Disclosure coordination").count()) > 0);
+const dealHeader = await page.locator(".detail-grid").waitFor({ timeout: 30000 })
+  .then(() => true).catch(() => false);
+step("deal detail renders", dealHeader);
+step("Section I editor is present",
+     (await page.getByText("Disclosure coordination").count()) > 0);
 
 await page.getByRole("button", { name: /Create link/ }).click();
-await page.waitForTimeout(1500);
+await page.locator(".linkbox code").waitFor({ timeout: 30000 });
 const link = await page.locator(".linkbox code").innerText();
 step("seller link issued", link.includes("/s/"));
 
@@ -64,11 +74,11 @@ seller.on("console", (m) => {
 });
 
 await seller.goto(link, { waitUntil: "domcontentloaded", timeout: 60000 });
-await seller.waitForTimeout(2000);
+await seller.locator("h1").waitFor({ timeout: 30000 });
 step("seller landing renders", (await seller.locator("h1").count()) > 0);
 
 await seller.getByRole("button", { name: /Start|Pick up/ }).click();
-await seller.waitForTimeout(1500);
+await seller.locator("h1,h2").first().waitFor({ timeout: 30000 });
 // This is the assertion that would have caught the hooks crash: after Start,
 // the flow must still be rendering something.
 step("flow renders past the landing screen", (await seller.locator("h1,h2").count()) > 0);
