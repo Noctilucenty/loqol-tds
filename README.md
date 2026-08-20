@@ -314,6 +314,20 @@ admitting, because they're the interesting ones:
 All of those have regression tests now (`tests/test_audit_regressions.py`), one
 per defect, named after what it would have done to a seller.
 
+There are three checks, because each one catches things the others cannot:
+
+- `pytest` — 73 unit tests over the form model, the API and the defects above.
+- `scripts/smoke.mjs` — walks the seller flow in a real browser and fails on any
+  page error. It exists because the Python tests never render a page.
+- `scripts/audit.py` — drives the whole workflow against a running instance:
+  create a deal, issue a link, answer every question, trip a contradiction,
+  submit, download the PDF, push it to DocuSeal, and confirm every write path is
+  frozen afterwards. 34 checks. Point it at production and it tells you whether
+  the thing actually works, which is the only question that matters.
+
+`scripts/check_hooks.py` exists for one reason: I shipped the same React
+rules-of-hooks bug twice, and both times it blanked the whole seller flow.
+
 ---
 
 ## Running it
@@ -340,7 +354,9 @@ DATABASE_URL=postgresql://...  # defaults to SQLite
 ```
 
 ```bash
-.venv/bin/python -m pytest -q                         # 61 tests
+.venv/bin/python -m pytest -q                         # 73 tests
+.venv/bin/python scripts/check_hooks.py               # rules-of-hooks check
+.venv/bin/python scripts/audit.py <url>               # drive the real workflow
 npm --prefix web i -D playwright && npx playwright install chromium
 node scripts/smoke.mjs                                # browser walk-through
 .venv/bin/python scripts/create_docuseal_template.py  # build the template
