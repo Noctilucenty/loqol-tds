@@ -147,8 +147,9 @@ export function SellerFlow() {
 
   // How far through the spoken questions the seller is, so the panel can show a
   // finish line rather than an open-ended conversation.
+  const currentChapter = step && step.kind !== "review" ? (step as any).chapterId : null;
   const voiceQuestions = form.questions.filter(
-    (q) => q.lane === "voice" && isVisible(q, answers),
+    (q) => q.lane === "voice" && q.chapter === currentChapter && isVisible(q, answers),
   );
   const voiceTotal = voiceQuestions.length;
   const voiceCovered = voiceQuestions.filter((q) => isAnswered(answers, q.id)).length;
@@ -159,6 +160,22 @@ export function SellerFlow() {
    *  The whole group is handed to the server, which decides which are actually
    *  unanswered. Filtering here against the optimistic local copy would race a
    *  tap that has not round-tripped yet and overwrite it with false. */
+  /** The assistant said it is done with this section. Move past every spoken
+   *  question it already answered, rather than one step onto a question that is
+   *  now filled in. */
+  const onVoiceFinished = useCallback(() => {
+    refresh();
+    setStepKey((currentKey) => {
+      const from = steps.findIndex((s) => s.key === currentKey);
+      for (let i = Math.max(from, 0) + 1; i < steps.length; i += 1) {
+        const s = steps[i];
+        if (s.kind !== "question") return s.key;
+        if (!isAnswered(answers, s.question.id)) return s.key;
+      }
+      return steps[steps.length - 1]?.key ?? currentKey;
+    });
+  }, [refresh, steps, answers]);
+
   const advance = () => {
     const current = step;
     const next = steps[Math.min(index + 1, steps.length - 1)];
@@ -224,15 +241,10 @@ export function SellerFlow() {
             token={token}
             question={step.question}
             answers={answers}
+            knownAddress={state.property.address}
             onAnswer={answer}
             onVoiceAnswer={refresh}
-            onVoiceFinished={() => {
-              refresh();
-              // Speaking is finished; move them on rather than leaving them
-              // parked on a question the assistant already answered.
-              const next = steps[Math.min(index + 1, steps.length - 1)];
-              if (next) setStepKey(next.key);
-            }}
+            onVoiceFinished={onVoiceFinished}
             chapterTitle={chapter?.title ?? ""}
             voiceCovered={voiceCovered}
             voiceTotal={voiceTotal}
@@ -288,10 +300,12 @@ function QuestionStep({
   chapterTitle,
   voiceCovered,
   voiceTotal,
+  knownAddress,
 }: {
   token: string;
   question: any;
   answers: any;
+  knownAddress: string;
   onAnswer: (id: string, v: unknown, s?: "answered" | "unknown") => void;
   onVoiceAnswer: () => void;
   onVoiceFinished: () => void;
@@ -323,7 +337,15 @@ function QuestionStep({
         )}
         <Answering
           question={question}
-          answer={answers[question.id]}
+          // The address is shown pre-filled from the deal so there is something
+          // to actually check. It is a display default, not a stored answer:
+          // storing it made the disclosure look started before the seller had
+          // opened it, and made their first correction look like a contradiction.
+          answer={
+            question.id === "P.address" && !answers[question.id] && knownAddress
+              ? { value: knownAddress, status: "answered", source: "agent", revision: 0 }
+              : answers[question.id]
+          }
           onAnswer={(v, s) => onAnswer(question.id, v, s)}
           autoFocus={!voiceLane}
         />

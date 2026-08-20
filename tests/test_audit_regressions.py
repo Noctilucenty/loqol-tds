@@ -303,3 +303,95 @@ def test_a_hedged_sentence_stays_unsure_however_it_ends():
     q = QUESTIONS_BY_ID["C.encroachments"]
     assert coerce(q, "I'm not sure whether the shed crosses the line", "answered") \
         == ("unknown", "unknown")
+
+
+# ---------------------------------------------------------------------------
+# Second review round: regressions my own fixes introduced
+# ---------------------------------------------------------------------------
+
+def test_a_street_name_starting_with_a_hedge_word_is_not_an_unknown():
+    """"Maybell Ave" starts with "maybe"; prefix matching needs a word boundary."""
+    q = QUESTIONS_BY_ID["P.address"]
+    assert coerce(q, "Maybell Ave 3400, Palo Alto, CA", "answered") \
+        == ("Maybell Ave 3400, Palo Alto, CA", "answered")
+    assert coerce(q, "Nolan St 12", "answered")[1] == "answered"
+
+
+def test_a_hedge_in_free_text_is_the_answer_not_an_unknown():
+    """In a narrative, "not sure which winter" is content, not an abstention."""
+    q = QUESTIONS_BY_ID["C.explain"]
+    value, status = coerce(q, "Not sure which winter it was, maybe 2021.", "answered")
+    assert status == "answered"
+    assert "2021" in value
+
+
+def test_a_yes_no_hedge_still_becomes_unknown():
+    q = QUESTIONS_BY_ID["C.flooding"]
+    assert coerce(q, "maybe", "answered") == ("unknown", "unknown")
+    assert coerce(q, "not sure about the shed", "answered") == ("unknown", "unknown")
+
+
+def test_creating_a_deal_leaves_it_not_started(client):
+    """Seeding an answer flipped every new deal to "in progress" before the
+    seller had opened the link, which is the one thing that column tells you."""
+    fresh = client.__class__(client.app)
+    fresh.post("/api/auth/demo")
+    deal = fresh.post("/api/agent/deals", json={
+        "property_address": "9 Fresh St", "seller_name": "Pat", "seller_email": "p@example.com",
+    }).json()
+    assert deal["status"] == "draft"
+    assert deal["percent"] == 0
+
+
+def test_a_first_time_seller_sees_a_fresh_disclosure(client, seller_link):
+    """Nothing is answered before the seller touches it, so the welcome screen
+    (which is gated on zero answers) is reachable."""
+    state = client.get(f"/api/s/{seller_link['token']}").json()
+    assert state["progress"]["answered"] == 0
+
+
+def test_correcting_the_address_reaches_the_printed_form(client, seller_link):
+    """The address is deal metadata; without a write-back the seller corrects it,
+    is told it prints on all three pages, and it does not."""
+    token = seller_link["token"]
+    client.put(f"/api/s/{token}/answers", json={
+        "question_id": "P.address", "value": "999 Corrected Ave, Culver City, CA 90230",
+    })
+    review = client.get(f"/api/agent/deals/{seller_link['deal_id']}/review").json()
+    assert review["deal"]["property_address"] == "999 Corrected Ave, Culver City, CA 90230"
+
+
+def test_a_hard_flag_cannot_be_closed_by_re_confirming_the_same_answer(client, db, seller_link):
+    """Re-tapping the value you already had is a no-op write. Settling on it
+    stamped a fingerprint over unchanged answers and suppressed the rule for
+    good, so the form shipped with the contradiction and the gate defeated."""
+    token, sid = seller_link["token"], seller_link["session_id"]
+    client.put(f"/api/s/{token}/answers", json={"question_id": "B.gate", "value": "yes"})
+    client.put(f"/api/s/{token}/answers", json={"question_id": "B.components", "value": []})
+
+    flag = db.scalar(select(Flag).where(
+        Flag.session_id == sid, Flag.rule_id == "defects_yes_no_components",
+        Flag.state == FlagState.OPEN))
+    assert flag is not None
+
+    # Re-affirm the value that caused it.
+    client.post(f"/api/s/{token}/flags/{flag.id}/resolve", json={
+        "questionId": "B.gate", "value": "yes"})
+
+    db.expire_all()
+    assert db.scalar(select(Flag).where(Flag.id == flag.id)).state == FlagState.OPEN
+    assert client.post(f"/api/s/{token}/submit").json()["ok"] is False
+
+
+def test_an_agent_only_contradiction_does_not_trap_the_seller(client, db, seller_link):
+    """`substituted_disclosures_conflict` names only Section I. The seller has no
+    control for it and no dismiss button, so it must not block their submit."""
+    token, sid = seller_link["token"], seller_link["session_id"]
+    write_answer(db, sid, "I.substituted", ["none", "inspection_reports"],
+                 source=AnswerSource.AGENT, actor="agent", advance_cursor=False)
+    open_rules = {f.rule_id for f in sync_flags(db, sid)}
+    assert "substituted_disclosures_conflict" in open_rules
+
+    result = client.post(f"/api/s/{token}/submit").json()
+    blocking = {f["message"] for f in result.get("hardFlags", [])}
+    assert not any("substituted" in m.lower() for m in blocking), blocking

@@ -50,6 +50,13 @@ export function VoicePanel({
   const partial = useRef<string>("");
   const audioCtx = useRef<AudioContext | null>(null);
 
+  // Held in a ref so `stop` has a stable identity. It used to close over
+  // `onFinished`; the parent passes an inline arrow, so `stop` changed on every
+  // render, the cleanup effect re-ran, and the live WebRTC call was torn down
+  // after the seller's very first answer.
+  const onFinishedRef = useRef(onFinished);
+  onFinishedRef.current = onFinished;
+
   const stop = useCallback(
     (finished = false) => {
       window.clearInterval(countdown.current);
@@ -67,9 +74,9 @@ export function VoicePanel({
       setLevel(0);
       setSecondsLeft(null);
       setPhase("idle");
-      if (finished) onFinished();
+      if (finished) onFinishedRef.current();
     },
-    [onFinished],
+    [],
   );
 
   useEffect(() => () => stop(), [stop]);
@@ -220,7 +227,10 @@ export function VoicePanel({
         setSecondsLeft((s) => {
           if (s === null) return null;
           if (s <= 1) {
-            stop(true);
+            // Not stop(true): advancing would move a seller who is mid-sentence
+            // off the question, losing the answer they were describing.
+            stop(false);
+            setError("The talking session timed out. Start it again, or type your answer below.");
             return null;
           }
           return s - 1;
@@ -278,14 +288,19 @@ export function VoicePanel({
           </div>
         </div>
 
-        {total > 0 && (
-          <span className="chip voice-count" title="Questions in this section">
+        {live && secondsLeft !== null && (
+          <span className="chip voice-count" title="Talking time left in this session">
+            {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}
+          </span>
+        )}
+        {total > 1 && (
+          <span className="chip voice-count" title="Spoken questions in this section">
             {covered} of {total}
           </span>
         )}
       </div>
 
-      {live && total > 0 && (
+      {live && total > 1 && (
         <div className="voice-progress" aria-hidden>
           <span style={{ width: `${Math.min(100, (covered / total) * 100)}%` }} />
         </div>
@@ -307,16 +322,17 @@ export function VoicePanel({
       {live && (
         <div className="voice-actions">
           <span className="tiny voice-hint">
-            {covered >= total && total > 0
-              ? "That is all of them. You can finish here."
-              : `${Math.max(total - covered, 0)} left in this section${
-                  secondsLeft !== null && secondsLeft < 90
-                    ? ` \u00b7 ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")} of talking time`
-                    : ""
-                }`}
+            {total > 1 && covered >= total
+              ? "That is all of them. You can carry on below."
+              : total > 1
+                ? `${Math.max(total - covered, 0)} left in this section`
+                : "Say it however it comes out."}
           </span>
-          <button type="button" className="btn voice-done" onClick={() => stop(true)}>
-            {covered >= total && total > 0 ? "Done" : "Stop and finish by tapping"}
+          {/* stop(false), not stop(true). Finishing advances the step; this
+              button exists for a seller who wants to type this answer instead,
+              so moving them off the question defeats the point. */}
+          <button type="button" className="btn voice-done" onClick={() => stop(false)}>
+            Stop talking
           </button>
         </div>
       )}

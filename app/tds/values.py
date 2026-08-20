@@ -51,11 +51,22 @@ def _word(value: Any) -> str:
 
 
 def _looks_unsure(value: Any) -> bool:
+    """Is this a hedge rather than an answer?
+
+    Prefix matching needs a word boundary. Without one, the street address
+    "Maybell Ave, Palo Alto" starts with "maybe" and gets filed as "I don't
+    know" - so the seller is shown an empty address box and the question lands
+    in the missing-required list.
+    """
     text = _word(value)
     if text in UNSURE_WORDS:
         return True
-    # "I'm not sure whether the shed is on the line" is hedged, however it ends.
-    return any(text.startswith(phrase) for phrase in UNSURE_WORDS)
+    return any(
+        text.startswith(phrase) and (
+            len(text) == len(phrase) or not text[len(phrase)].isalnum()
+        )
+        for phrase in UNSURE_WORDS
+    )
 
 
 def _leading_polarity(value: Any) -> bool | None:
@@ -91,7 +102,10 @@ def coerce(question: Question, value: Any, status: str = "answered") -> tuple[An
     if status == "skipped":
         return None, "skipped"
 
-    if status == "unknown" or _looks_unsure(value):
+    # A hedge is only a hedge where the question is asking for a yes or a no.
+    # In free text, "not sure which of the two it was" is the answer itself.
+    hedged = _looks_unsure(value) and question.kind in ("tri", "bool", "single", "multi", "int")
+    if status == "unknown" or hedged:
         # Only the paired Yes/No questions can render "I don't know" honestly, by
         # leaving both boxes clear. Anywhere else it is an absence of an answer.
         return ("unknown", "unknown") if question.kind == "tri" else (None, "unknown")

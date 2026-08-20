@@ -344,31 +344,3 @@ def settle_flag(
     flag.resolved_at = utcnow()
     db.commit()
 
-
-def seed_from_deal(db: Session, session_id: str, deal) -> None:
-    """Pre-fill the answers the agent has already given us.
-
-    The property address is the obvious one: the seller is asked "is this the
-    right property address?", and handing them an empty box makes that question
-    impossible to answer - there is nothing to check. It is seeded from the deal
-    record, attributed to the agent, so the seller sees it filled in and only has
-    to correct it if it is wrong.
-
-    Idempotent: it never overwrites something already answered.
-    """
-    if not deal or not deal.property_address:
-        return
-    existing = db.scalar(
-        select(Answer).where(
-            Answer.session_id == session_id, Answer.question_id == "P.address"
-        )
-    )
-    if existing is not None:
-        return
-    write_answer(
-        db, session_id, "P.address", deal.property_address,
-        status=AnswerStatus.ANSWERED,
-        source=AnswerSource.AGENT,
-        actor="agent",
-        advance_cursor=False,
-    )

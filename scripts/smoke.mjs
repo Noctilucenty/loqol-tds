@@ -78,6 +78,10 @@ await seller.locator("h1").waitFor({ timeout: 30000 });
 step("seller landing renders", (await seller.locator("h1").count()) > 0);
 
 await seller.getByRole("button", { name: /Start|Pick up/ }).click();
+// Wait for the landing screen to actually go. Waiting on "h1,h2" resolved
+// instantly against the landing page's own heading, so the assertion that
+// exists to catch a render crash passed trivially.
+await seller.locator(".gate-title").waitFor({ state: "detached", timeout: 30000 });
 await seller.locator("h1,h2").first().waitFor({ timeout: 30000 });
 // This is the assertion that would have caught the hooks crash: after Start,
 // the flow must still be rendering something.

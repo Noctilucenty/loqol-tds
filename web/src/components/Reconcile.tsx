@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
 import { Answering } from "./Answering";
-import { isAnswered, type AnswerMap } from "../lib/gating";
+import { isAnswered, isVisible, type AnswerMap } from "../lib/gating";
 import type { FormSpec, SellerState } from "../types";
 import "./reconcile.css";
 
@@ -47,7 +47,13 @@ export function Reconcile({
    *  ones, and fall back to the whole set when everything is filled in and the
    *  contradiction is between two real values. */
   const questionsNeeding = (ids: string[]) => {
-    const present = ids.map((id) => byId[id]).filter(Boolean);
+    // Only questions this seller can actually answer: in their own form spec,
+    // and not sitting behind a gate that is currently shut. Rendering a gated
+    // question produced a control whose every tap 409s, with the failure
+    // swallowed and submit blocked forever.
+    const present = ids
+      .map((id) => byId[id])
+      .filter((q) => q && isVisible(q, answers));
     const empty = present.filter((q) => !isAnswered(answers, q.id));
     return empty.length ? empty : present;
   };
@@ -163,6 +169,14 @@ export function Reconcile({
             </div>
             <p className="rec-q">{flag.prompt || flag.message}</p>
             <p className="rec-detail small muted">{flag.message}</p>
+
+            {questions.length === 0 && (
+              <p className="small rec-noaction">
+                This one is your agent's to settle &mdash; it is about the paperwork they
+                attached, not something you answered. Send the rest through and they will
+                sort it out.
+              </p>
+            )}
 
             {questions.map((question) => (
               <div className="rec-fix" key={question.id}>

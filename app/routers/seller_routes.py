@@ -20,8 +20,8 @@ from ..models import (
 from ..schemas import AnswerIn, form_spec
 from ..tds.questions import QUESTIONS_BY_ID
 from ..services import (
-    FrozenDisclosure, answers_dict, next_question_id, progress, seed_from_deal, settle_flag,
-    sync_flags, unanswered_required, write_answer,
+    FrozenDisclosure, answers_dict, next_question_id, progress, settle_flag, sync_flags,
+    unanswered_required, write_answer,
 )
 from ..tds.gating import is_visible
 from ..tds.questions import CHAPTERS_BY_ID, QUESTIONS_BY_ID
@@ -76,10 +76,7 @@ def _state(db: Session, ds: DisclosureSession) -> dict:
         "sellerName": deal.seller_name,
         "agentName": deal.agent.name if deal.agent else "",
         "status": ds.status.value,
-        # Only where the seller actually left off. Falling back to "first
-        # unanswered" made a fresh session skip the address confirmation, because
-        # the address is seeded from the deal and therefore already answered.
-        "cursor": ds.cursor_question_id,
+        "cursor": ds.cursor_question_id or next_question_id(answers),
         "answers": {
             qid: {
                 "value": r.value.get("v"),
@@ -110,8 +107,6 @@ def _state(db: Session, ds: DisclosureSession) -> dict:
 def open_disclosure(token: str, request: Request, db: Session = Depends(get_db)):
     """Everything needed to render the seller experience, in one round trip."""
     ds = _session(token, request, db)
-    # Backfill for disclosures created before the address was seeded.
-    seed_from_deal(db, ds.id, db.get(Deal, ds.deal_id))
     return {"form": form_spec("seller"), **_state(db, ds)}
 
 
@@ -162,6 +157,17 @@ def put_answer(
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     except (ValueError_, ValueError) as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+    if body.question_id == "P.address" and isinstance(row.value.get("v"), str):
+        # The address is deal metadata, not a form answer - it reaches all three
+        # page headers through roles.SYSTEM_FIELDS. Without this write-back the
+        # seller is told to check it character by character, corrects a wrong
+        # ZIP, and then signs three pages carrying the address they rejected.
+        corrected = row.value["v"].strip()
+        deal = db.get(Deal, ds.deal_id)
+        if corrected and deal and deal.property_address != corrected:
+            deal.property_address = corrected
+            db.commit()
 
     return {
         "questionId": row.question_id,
@@ -231,9 +237,18 @@ def submit(token: str, request: Request, db: Session = Depends(get_db)):
     ds = _session(token, request, db)
     answers = answers_dict(db, ds.id)
     missing = unanswered_required(answers)
+    # A hard flag about questions only the agent can answer must not trap the
+    # seller. They have no control to fix it and no way to dismiss it, so it
+    # would block "Send to my agent" permanently with nothing on screen to do.
     hard = [
         f for f in sync_flags(db, ds.id)
-        if f.severity == "hard" and not f.rule_id.startswith("conflict:")
+        if f.severity == "hard"
+        and not f.rule_id.startswith("conflict:")
+        and any(
+            qid in QUESTIONS_BY_ID
+            and CHAPTERS_BY_ID[QUESTIONS_BY_ID[qid].chapter].audience == "seller"
+            for qid in (f.question_ids or [])
+        )
     ]
     if missing or hard:
         return {
@@ -274,6 +289,15 @@ def resolve_flag(
             source=AnswerSource.FORM,
             advance_cursor=False,
         )
+
+    # Settle only if the contradiction is actually gone. Settling
+    # unconditionally let a seller close a hard flag by re-tapping the value they
+    # already had - a no-op write that stamped a fingerprint over the unchanged
+    # answers and permanently suppressed the rule, so the form shipped with the
+    # contradiction intact and the hard gate defeated.
+    still_firing = {f.rule_id for f in sync_flags(db, ds.id)}
+    if flag.rule_id in still_firing and flag.severity == "hard":
+        return _state(db, ds)
 
     settle_flag(db, flag, state=FlagState.RESOLVED, note=body.get("note", ""), by="seller")
     return _state(db, ds)
