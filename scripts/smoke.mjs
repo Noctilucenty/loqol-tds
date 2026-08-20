@@ -7,6 +7,11 @@
  * the entire seller flow down with a blank screen. Anything that walks the flow
  * in a real browser would have caught it in seconds. This does.
  *
+ * Playwright is intentionally not a dependency of the app - the production image
+ * has no business downloading browsers. Install it when you want to run this:
+ *
+ *   npm --prefix web i -D playwright && npx playwright install chromium
+ *
  * Usage:  node scripts/smoke.mjs [baseUrl]
  * Exits non-zero on any page error, console error, or failed step.
  */

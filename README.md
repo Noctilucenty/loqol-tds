@@ -341,7 +341,8 @@ DATABASE_URL=postgresql://...  # defaults to SQLite
 
 ```bash
 .venv/bin/python -m pytest -q                         # 61 tests
-npx playwright install chromium && node scripts/smoke.mjs   # browser walk-through
+npm --prefix web i -D playwright && npx playwright install chromium
+node scripts/smoke.mjs                                # browser walk-through
 .venv/bin/python scripts/create_docuseal_template.py  # build the template
 .venv/bin/python scripts/extract_widgets.py           # re-extract PDF geometry
 ```
