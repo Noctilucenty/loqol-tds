@@ -13,6 +13,8 @@ from fastapi.staticfiles import StaticFiles
 from .config import settings
 from .db import init_db
 from .routers import agent_routes, auth_routes, seller_routes, voice_routes
+from .services import FrozenDisclosure
+from .tds.values import ValueError_
 from .tds.fieldmap import coverage, validate
 
 log = logging.getLogger("loqol")
@@ -68,6 +70,22 @@ async def security_headers(request: Request, call_next):
     if request.url.path.startswith("/api/s/") or request.url.path.startswith("/s/"):
         response.headers["Cache-Control"] = "no-store"
     return response
+
+
+@app.exception_handler(FrozenDisclosure)
+async def frozen_disclosure(request: Request, exc: FrozenDisclosure):
+    """A write that lands after the document was sent is a conflict, not a crash.
+
+    Registered app-wide rather than per route: the guard lives in `write_answer`,
+    so every current and future caller is covered without each one remembering to
+    catch it.
+    """
+    return JSONResponse({"detail": str(exc)}, status_code=409)
+
+
+@app.exception_handler(ValueError_)
+async def bad_answer_value(request: Request, exc: ValueError_):
+    return JSONResponse({"detail": str(exc)}, status_code=400)
 
 
 @app.get("/api/health")

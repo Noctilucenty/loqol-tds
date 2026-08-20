@@ -132,10 +132,13 @@ export function SellerFlow() {
   // Resolved by key, so a step list that grew or shrank under us does not move
   // the seller. If the current step disappeared entirely - the answer that
   // opened it was changed - fall forward to the next surviving step.
-  const index = Math.max(
-    0,
-    steps.findIndex((s) => s.key === stepKey),
-  );
+  // If the current step disappeared - the answer that opened it changed - hold
+  // position and fall forward. Clamping a -1 to 0 teleported the seller back to
+  // the very first screen mid-interview.
+  const found = steps.findIndex((s) => s.key === stepKey);
+  const lastKnown = useRef(0);
+  if (found >= 0) lastKnown.current = found;
+  const index = found >= 0 ? found : Math.min(lastKnown.current, Math.max(steps.length - 1, 0));
   const step = steps[Math.min(index, steps.length - 1)];
 
   /** Leaving a grid commits the implied "no" for every tile left untouched, so

@@ -22,6 +22,8 @@ What happens when a seller answers the same question twice:
 
 from __future__ import annotations
 
+import json
+from collections.abc import Iterable
 from typing import Any
 
 from sqlalchemy import select
@@ -34,6 +36,11 @@ from .models import (
 from .tds import rules
 from .tds.gating import is_visible
 from .tds.questions import CHAPTERS, CHAPTERS_BY_ID, QUESTIONS_BY_ID, SELLER_QUESTIONS
+from .tds.values import coerce
+
+
+class FrozenDisclosure(RuntimeError):
+    """Raised when a write lands after the document was sent for signature."""
 
 
 def answers_dict(db: Session, session_id: str) -> dict[str, Any]:
@@ -47,9 +54,15 @@ def answers_dict(db: Session, session_id: str) -> dict[str, Any]:
         if row.status == AnswerStatus.SKIPPED:
             continue
         if row.status == AnswerStatus.UNKNOWN:
-            out[row.question_id] = "unknown"
-        else:
-            out[row.question_id] = row.value.get("v")
+            q = QUESTIONS_BY_ID.get(row.question_id)
+            # "unknown" is only a printable answer where the form has a Yes/No
+            # pair to leave clear. Emitting the sentinel for a plain checkbox
+            # would make `bool("unknown")` tick the box - an affirmative answer
+            # to a question the seller explicitly could not answer.
+            if q is not None and q.kind == "tri":
+                out[row.question_id] = "unknown"
+            continue
+        out[row.question_id] = row.value.get("v")
     return out
 
 
@@ -65,8 +78,26 @@ def write_answer(
     actor: str = "seller",
     advance_cursor: bool = True,
 ) -> Answer:
-    if question_id not in QUESTIONS_BY_ID:
+    question = QUESTIONS_BY_ID.get(question_id)
+    if question is None:
         raise ValueError(f"unknown question {question_id!r}")
+
+    # Normalise before anything is stored. Both lanes land here, so a phrase the
+    # voice agent heard and a value the browser posted are held to one standard.
+    value, status_str = coerce(question, value, str(status))
+    status = AnswerStatus(status_str)
+
+    frozen = db.get(DisclosureSession, session_id)
+    if frozen is not None and frozen.status in (
+        SessionStatus.SENT_FOR_SIGNATURE, SessionStatus.COMPLETED
+    ):
+        # The signable document is frozen the moment it is sent. Guarding only
+        # the form endpoint left three other write paths able to drift the
+        # answers out from under a document the seller was about to sign.
+        raise FrozenDisclosure(
+            "This disclosure has already been sent for signature and can no "
+            "longer be changed."
+        )
 
     existing = db.scalar(
         select(Answer).where(
@@ -167,29 +198,48 @@ def _render(value: Any) -> str:
     return str(value)
 
 
-def sync_flags(db: Session, session_id: str) -> list[Flag]:
-    """Re-run the consistency rules and reconcile the open flag set.
+def _fingerprint(answers: dict[str, Any], question_ids: Iterable[str]) -> str:
+    """A stable signature of exactly the answers a rule inspects."""
+    return json.dumps({q: answers.get(q) for q in sorted(question_ids)},
+                      sort_keys=True, default=str)
 
-    Flags that no longer fire are closed automatically - a seller who fixes a
-    contradiction should not have to also dismiss the warning about it.
+
+def sync_flags(db: Session, session_id: str) -> list[Flag]:
+    """Re-run the consistency rules and reconcile the flag set.
+
+    Two things must hold at once. A flag that stops firing closes itself, so
+    fixing a contradiction does not also require dismissing the warning about it.
+    And a decision a human already made has to stick: when a seller says "both
+    are right", or an agent dismisses a hard flag, the next answer written must
+    not quietly resurrect it. It used to, which turned a dismissed hard flag into
+    an unbreakable deadlock on sending for signature.
+
+    The decision is remembered against a fingerprint of the answers the rule
+    actually looks at, so it holds while those answers hold and lapses honestly
+    if the seller changes one of them.
     """
     current = answers_dict(db, session_id)
     firing = {r.id: r for r in rules.evaluate(current)}
 
-    open_flags = list(db.scalars(
-        select(Flag).where(Flag.session_id == session_id, Flag.state == FlagState.OPEN)
-    ))
-    for flag in open_flags:
-        if flag.rule_id.startswith("conflict:"):
+    all_flags = list(db.scalars(select(Flag).where(Flag.session_id == session_id)))
+    for flag in all_flags:
+        if flag.state != FlagState.OPEN or flag.rule_id.startswith("conflict:"):
             continue
         if flag.rule_id not in firing:
             flag.state = FlagState.RESOLVED
             flag.resolved_at = utcnow()
 
-    existing_ids = {f.rule_id for f in open_flags if f.state == FlagState.OPEN}
+    existing_ids = {f.rule_id for f in all_flags if f.state == FlagState.OPEN}
+    settled = {
+        f.rule_id: (f.resolution or {}).get("fingerprint")
+        for f in all_flags
+        if f.state in (FlagState.RESOLVED, FlagState.DISMISSED)
+    }
     for rule_id, rule in firing.items():
         if rule_id in existing_ids:
             continue
+        if rule_id in settled and settled[rule_id] == _fingerprint(current, rule.questions):
+            continue  # a human already decided this, on exactly these answers
         db.add(Flag(
             session_id=session_id,
             rule_id=rule_id,
@@ -269,3 +319,27 @@ def unanswered_required(answers: dict[str, Any]) -> list[str]:
         and q.required_when_shown
         and answers.get(q.id) in (None, "", [])
     ]
+
+
+def settle_flag(
+    db: Session,
+    flag: Flag,
+    *,
+    state: FlagState,
+    note: str = "",
+    by: str = "seller",
+) -> None:
+    """Close a flag, remembering which answers the decision was made against.
+
+    Without the fingerprint the decision cannot survive the next `sync_flags`:
+    the rule is still firing, so a fresh flag would simply be raised in its place.
+    """
+    current = answers_dict(db, flag.session_id)
+    flag.state = state
+    flag.resolution = {
+        "note": note,
+        "by": by,
+        "fingerprint": _fingerprint(current, flag.question_ids or []),
+    }
+    flag.resolved_at = utcnow()
+    db.commit()

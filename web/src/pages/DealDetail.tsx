@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
 import { AgentShell } from "../components/AgentShell";
+import { Answering } from "../components/Answering";
+import { isVisible, type AnswerMap } from "../lib/gating";
 import type { Deal, FormSpec } from "../types";
 import "./agent.css";
 
@@ -30,6 +32,7 @@ export function DealDetail() {
   const [tab, setTab] = useState<"answers" | "history">("answers");
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [signUrl, setSignUrl] = useState<string | null>(null);
 
   const load = () => {
     api.get<Review>(`/api/agent/deals/${dealId}/review`).then(setReview);
@@ -66,11 +69,20 @@ export function DealDetail() {
     setNotice(null);
     try {
       const r = await api.post<{ sign_url: string }>(`/api/agent/deals/${dealId}/send-for-signature`);
-      setNotice(r.sign_url ? "Sent to DocuSeal." : "Submission created.");
-      if (r.sign_url) window.open(r.sign_url, "_blank", "noopener");
+      // Rendered as a link rather than opened for them: the POST is awaited, so
+      // a window.open here is outside the click's user-activation window and
+      // every browser suppresses it. The agent then assumes it failed and
+      // retries, which is how you end up with two signable copies.
+      setSignUrl(r.sign_url ?? null);
+      setNotice("Sent to DocuSeal. The signing link is below.");
       load();
     } catch (e: any) {
-      setNotice(e.message);
+      const d: any = e.body;
+      setNotice(
+        typeof d === "object" && d?.error
+          ? `${d.error}${d.detail ? ` — ${d.detail}` : ""}${d.answers ? ` (${d.answers.join("; ")})` : ""}`
+          : e.message,
+      );
     } finally {
       setBusy(null);
     }
@@ -97,7 +109,18 @@ export function DealDetail() {
         </p>
       </div>
 
-      {notice && <div className="card panel" style={{ marginBottom: "1.1rem" }}><p className="small" style={{ margin: 0 }}>{notice}</p></div>}
+      {notice && (
+        <div className="card panel" style={{ marginBottom: "1.1rem" }}>
+          <p className="small" style={{ margin: 0 }}>{notice}</p>
+          {signUrl && (
+            <div className="linkbox" style={{ marginTop: ".7rem" }}>
+              <code>{signUrl}</code>
+              <a className="btn btn-quiet tiny" href={signUrl} target="_blank" rel="noreferrer">Open</a>
+              <button className="btn btn-quiet tiny" onClick={() => navigator.clipboard?.writeText(signUrl)}>Copy</button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="detail-grid">
         <div>
@@ -238,6 +261,8 @@ export function DealDetail() {
             </div>
           )}
 
+          <SectionOne dealId={dealId} form={form} review={review} onSaved={load} />
+
           <div className="card panel">
             <h3>Form</h3>
             <p className="panel-note">
@@ -279,4 +304,60 @@ function renderValue(a: { value: unknown; status: string }, q: any): string {
   const opt = q.options?.find((o: any) => o.id === s);
   if (opt) return opt.label;
   return s.length > 70 ? `${s.slice(0, 70)}…` : s;
+}
+
+
+/** Section I of the statutory form: which reports travel with this transfer.
+ *
+ *  Deliberately the agent's, not the seller's - asking a homeowner which
+ *  inspection reports will be attached is asking them to do their agent's job.
+ *  It needs a control somewhere, though: without one these four questions have
+ *  no answer row, and every executed TDS goes out with Section I blank.
+ */
+function SectionOne({
+  dealId, form, review, onSaved,
+}: {
+  dealId: string;
+  form: FormSpec;
+  review: Review;
+  onSaved: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const questions = form.questions.filter((q) => q.chapter === "coordination");
+  if (!questions.length) return null;
+
+  const answers: AnswerMap = Object.fromEntries(
+    Object.entries(review.answers).map(([k, v]) => [
+      k, { value: v.value, status: v.status as any, source: v.source as any, revision: v.revision },
+    ]),
+  );
+
+  const save = async (questionId: string, value: unknown, status = "answered") => {
+    setBusy(true);
+    try {
+      await api.post(`/api/agent/deals/${dealId}/answers`, { question_id: questionId, value, status });
+      onSaved();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card panel">
+      <h3>Disclosure coordination</h3>
+      <p className="panel-note">
+        Section I of the form. Yours to complete — the seller is never asked this.
+      </p>
+      {questions.filter((q) => isVisible(q, answers)).map((q) => (
+        <div key={q.id} className="rec-fix" style={{ marginBottom: "1rem", opacity: busy ? 0.6 : 1 }}>
+          <div className="tiny muted rec-fix-label">{q.prompt}</div>
+          <Answering
+            question={q}
+            answer={answers[q.id]}
+            onAnswer={(v, st) => save(q.id, v, st ?? "answered")}
+          />
+        </div>
+      ))}
+    </div>
+  );
 }

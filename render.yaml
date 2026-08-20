@@ -3,7 +3,7 @@ services:
     name: loqol-tds
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: free
+    plan: starter
     region: oregon
     healthCheckPath: /api/health
     envVars:
@@ -25,6 +25,6 @@ services:
 
 databases:
   - name: loqol-tds-db
-    plan: free
+    plan: basic-256mb
     databaseName: loqol
     user: loqol

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,7 +11,7 @@ from sqlalchemy.orm import Session
 from ..auth import create_agent_session, current_agent, hash_password, revoke_agent_session, verify_password
 from ..config import settings
 from ..db import get_db
-from ..models import Agent
+from ..models import Agent, Deal, DisclosureSession
 from ..schemas import AgentOut, LoginIn, RegisterIn
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -52,6 +54,44 @@ def login(body: LoginIn, response: Response, request: Request, db: Session = Dep
     # email and a wrong password take the same time to fail.
     if agent is None or not verify_password(body.password, agent.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Email or password is incorrect")
+    _set_cookie(response, create_agent_session(db, agent, request.headers.get("user-agent", "")))
+    return AgentOut(id=agent.id, email=agent.email, name=agent.name, brokerage=agent.brokerage)
+
+
+@router.post("/demo", response_model=AgentOut)
+def demo(response: Response, request: Request, db: Session = Depends(get_db)):
+    """Sign in as a throwaway agent with a workspace of its own.
+
+    A shared demo login published in a public README is a working credential to
+    a live service: anyone who reads the repo can sign in and see every deal,
+    seller link and answer that account holds. Each visitor instead gets a fresh
+    agent with a random, never-displayed password, so there is nothing to publish
+    and no shared state to walk into.
+    """
+    handle = secrets.token_hex(4)
+    agent = Agent(
+        email=f"demo-{handle}@loqol.example",
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        name="Demo Agent",
+        brokerage="Loqol",
+    )
+    db.add(agent)
+    db.commit()
+
+    # Seed one deal so the dashboard is not an empty state on arrival.
+    deal = Deal(
+        agent_id=agent.id,
+        property_address="1247 Sepulveda Blvd, Culver City, CA 90230",
+        city="Culver City",
+        county="Los Angeles",
+        seller_name="Dana Whitfield",
+        seller_email="dana@example.com",
+    )
+    db.add(deal)
+    db.commit()
+    db.add(DisclosureSession(deal_id=deal.id))
+    db.commit()
+
     _set_cookie(response, create_agent_session(db, agent, request.headers.get("user-agent", "")))
     return AgentOut(id=agent.id, email=agent.email, name=agent.name, brokerage=agent.brokerage)
 

@@ -41,11 +41,16 @@ export function VoicePanel({ token, onAnswerRecorded, onFinished, disabled }: Pr
   const raf = useRef<number>();
   const countdown = useRef<number>();
   const partial = useRef<string>("");
+  const audioCtx = useRef<AudioContext | null>(null);
 
   const stop = useCallback(
     (finished = false) => {
       window.clearInterval(countdown.current);
       if (raf.current) cancelAnimationFrame(raf.current);
+      // Chrome caps a page at six AudioContexts; without this, six start/stops
+      // and the mic meter stops working for the rest of the session.
+      audioCtx.current?.close().catch(() => undefined);
+      audioCtx.current = null;
       dc.current?.close();
       pc.current?.close();
       stream.current?.getTracks().forEach((t) => t.stop());
@@ -62,6 +67,24 @@ export function VoicePanel({ token, onAnswerRecorded, onFinished, disabled }: Pr
 
   useEffect(() => () => stop(), [stop]);
 
+  /** Return a tool result, then explicitly ask for the next turn.
+   *
+   *  The realtime API does not generate a response off the back of a
+   *  function_call_output. Without the follow-up `response.create`, the
+   *  assistant records the seller's first answer and then never speaks again -
+   *  it looks like a hang, and it takes the entire voice lane down with it. */
+  const sendToolResult = useCallback((callId: string, output: unknown) => {
+    const channel = dc.current;
+    if (!channel || channel.readyState !== "open") return;
+    channel.send(
+      JSON.stringify({
+        type: "conversation.item.create",
+        item: { type: "function_call_output", call_id: callId, output: JSON.stringify(output) },
+      }),
+    );
+    channel.send(JSON.stringify({ type: "response.create" }));
+  }, []);
+
   const handleToolCall = useCallback(
     async (name: string, args: any, callId: string) => {
       if (name === "finish_section") {
@@ -73,31 +96,13 @@ export function VoicePanel({ token, onAnswerRecorded, onFinished, disabled }: Pr
         const res = await api.post<{ questionId: string }>(`/api/voice/${token}/answer`, args);
         setSaved((s) => [...s.slice(-4), res.questionId]);
         onAnswerRecorded(res.questionId);
-        dc.current?.send(
-          JSON.stringify({
-            type: "conversation.item.create",
-            item: {
-              type: "function_call_output",
-              call_id: callId,
-              output: JSON.stringify({ ok: true }),
-            },
-          }),
-        );
+        sendToolResult(callId, { ok: true });
       } catch (e: any) {
-        // Tell the model it failed so it can re-ask, rather than believing it saved.
-        dc.current?.send(
-          JSON.stringify({
-            type: "conversation.item.create",
-            item: {
-              type: "function_call_output",
-              call_id: callId,
-              output: JSON.stringify({ ok: false, error: e?.message ?? "rejected" }),
-            },
-          }),
-        );
+        // Tell the model it failed so it re-asks, rather than believing it saved.
+        sendToolResult(callId, { ok: false, error: e?.message ?? "rejected" });
       }
     },
-    [token, onAnswerRecorded, stop],
+    [token, onAnswerRecorded, stop, sendToolResult],
   );
 
   const onMessage = useCallback(
@@ -166,7 +171,12 @@ export function VoicePanel({ token, onAnswerRecorded, onFinished, disabled }: Pr
       const channel = conn.createDataChannel("oai-events");
       dc.current = channel;
       channel.onmessage = onMessage;
-      channel.onopen = () => setPhase("live");
+      channel.onopen = () => {
+        setPhase("live");
+        // The assistant opens. With low-eagerness turn detection nobody speaks
+        // first unless we ask, so both sides would sit waiting.
+        channel.send(JSON.stringify({ type: "response.create" }));
+      };
 
       const offer = await conn.createOffer();
       await conn.setLocalDescription(offer);
@@ -184,6 +194,7 @@ export function VoicePanel({ token, onAnswerRecorded, onFinished, disabled }: Pr
 
       // Mic level, purely so the seller can see they are being heard.
       const ctx = new AudioContext();
+      audioCtx.current = ctx;
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 512;
       ctx.createMediaStreamSource(mic).connect(analyser);

@@ -109,9 +109,14 @@ function TextAnswer({ question, answer, onAnswer, autoFocus }: Props) {
   const ref = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const timer = useRef<number>();
 
+  const incoming = String(answer?.value ?? "");
   useEffect(() => {
-    setDraft(String(answer?.value ?? ""));
-  }, [question.id]);
+    // Follows the stored answer, not just the question id. The voice agent
+    // writes into the very field the seller is looking at; keying this on
+    // question.id alone left the box empty, and blurring it then flushed that
+    // empty draft over the narrative the assistant had just captured.
+    setDraft((current) => (current === incoming ? current : incoming));
+  }, [question.id, incoming]);
 
   useEffect(() => {
     if (autoFocus) ref.current?.focus();
@@ -124,7 +129,7 @@ function TextAnswer({ question, answer, onAnswer, autoFocus }: Props) {
   };
   const flush = () => {
     window.clearTimeout(timer.current);
-    if (draft !== String(answer?.value ?? "")) onAnswer(draft);
+    if (draft !== incoming) onAnswer(draft);
   };
 
   if (question.kind === "longtext") {

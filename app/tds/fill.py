@@ -139,8 +139,25 @@ def render(
     if "/AcroForm" in writer._root_object:
         del writer._root_object["/AcroForm"]
 
+    staged = io.BytesIO()
+    writer.write(staged)
+
+    # Second pass. Dropping /Annots and /AcroForm unlinks the interactive layer
+    # but does not remove it: cloning carried all 159 widget dictionaries across
+    # as unreferenced objects, so the "flat" output still shipped the form's
+    # field data and was twice the size. Re-reading and copying only the pages
+    # leaves the orphans behind, because a fresh reader can only reach what the
+    # pages actually point at.
+    staged.seek(0)
+    final = PdfWriter()
+    for page in PdfReader(staged).pages:
+        page.pop("/Annots", None)
+        final.add_page(page)
+    if "/AcroForm" in final._root_object:
+        del final._root_object["/AcroForm"]
+
     out = io.BytesIO()
-    writer.write(out)
+    final.write(out)
     return out.getvalue()
 
 

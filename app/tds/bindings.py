@@ -28,6 +28,27 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 
+#: The sentinel `answers_dict` uses for an explicit "I don't know". Only the
+#: paired Yes/No bindings can render it; every checkbox must read it as "no tick",
+#: because `bool("unknown")` is True and would print an affirmative answer.
+UNKNOWN = "unknown"
+
+
+def _is_on(value: Any) -> bool:
+    if value is None or value is False:
+        return False
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text == UNKNOWN:
+            return False
+        # A count that arrived as text still means what it says. "0 remote
+        # controls" must not tick "Remote Controls: yes" just because bool("0")
+        # is True.
+        if text.lstrip("-").isdigit():
+            return int(text) != 0
+    return bool(value)
+
+
 @dataclass(frozen=True)
 class FieldWrite:
     """A resolved instruction to put `value` into one widget."""
@@ -61,7 +82,7 @@ class Check(Binding):
     invert: bool = False
 
     def writes(self, value: Any) -> Iterable[FieldWrite]:
-        on = bool(value)
+        on = _is_on(value)
         if self.invert:
             on = not on
         yield FieldWrite(self.name, on, self.occurrence)
@@ -85,7 +106,7 @@ class CheckOption(Binding):
     def writes(self, value: Any) -> Iterable[FieldWrite]:
         selected = value or []
         if isinstance(selected, str):
-            selected = [selected]
+            selected = [] if selected.strip().lower() == UNKNOWN else [selected]
         yield FieldWrite(self.name, self.option in selected, self.occurrence)
 
     def field_keys(self) -> Iterable[str]:
@@ -123,8 +144,9 @@ class SingleCheck(Binding):
     occurrences: dict[str, int] = field(default_factory=dict)
 
     def writes(self, value: Any) -> Iterable[FieldWrite]:
+        unknown = isinstance(value, str) and value.strip().lower() == UNKNOWN
         for option, name in self.mapping.items():
-            yield FieldWrite(name, value == option, self.occurrences.get(option, 0))
+            yield FieldWrite(name, (not unknown) and value == option, self.occurrences.get(option, 0))
 
     def field_keys(self) -> Iterable[str]:
         for option, name in self.mapping.items():
@@ -139,7 +161,10 @@ class Text(Binding):
     occurrence: int = 0
 
     def writes(self, value: Any) -> Iterable[FieldWrite]:
-        yield FieldWrite(self.name, "" if value is None else str(value), self.occurrence)
+        if value is None or (isinstance(value, str) and value.strip().lower() == UNKNOWN):
+            yield FieldWrite(self.name, "", self.occurrence)
+            return
+        yield FieldWrite(self.name, str(value), self.occurrence)
 
     def field_keys(self) -> Iterable[str]:
         yield FieldWrite(self.name, "", self.occurrence).key
@@ -246,7 +271,7 @@ class CheckAny(Binding):
     def writes(self, value: Any) -> Iterable[FieldWrite]:
         selected = value or []
         if isinstance(selected, str):
-            selected = [selected]
+            selected = [] if selected.strip().lower() == UNKNOWN else [selected]
         yield FieldWrite(self.name, any(o in selected for o in self.options), self.occurrence)
 
     def field_keys(self) -> Iterable[str]:

@@ -1,415 +1,318 @@
-# Loqol disclosures — California TDS
+# Loqol TDS — seller disclosure app
 
-A web app that interviews a home seller and turns their answers into a completed,
-signable California Transfer Disclosure Statement.
+Live: **https://loqol-tds.onrender.com**
 
-- **Live:** https://loqol-tds.onrender.com  
-  (free Render instance — the first request after an idle spell takes ~30s to wake)
-- **Design notes** (the routing decision, generated from the live form spec): `/design`
-- **Demo agent login:** `agent@loqol.ai` / `disclosure-demo-1`, or the "Use the demo
-  account" button on the sign-in page.
+A web app that interviews a home seller, then fills and sends the California
+Transfer Disclosure Statement for signature.
 
 ---
 
-## The one decision this exercise is really about
+## Try it in about two minutes
 
-> **Speak when the bottleneck is understanding. Tap when the bottleneck is enumeration.**
+1. Open https://loqol-tds.onrender.com
+2. Click **Try it without signing up**. You get your own private workspace with a
+   sample deal already in it. Nothing is shared with other visitors.
+3. Open the deal, click **Create link**, copy it.
+4. Paste it in another tab (or your phone). That is what the seller sees.
+5. Answer a few questions. Tick "Public Sewer System" *and* "Septic Tank" on the
+   sewer screen if you want to see the contradiction handling.
+6. Get to the end and you will hit the review screen. Then go back to the agent
+   tab and hit **Open filled PDF**.
 
-The intuitive split is *voice for the scary legal parts, tapping for the easy
-parts*. I think that split is wrong, and following it produces a seller reading
-fifty appliance names out loud.
+If you want to see the reasoning behind the voice/tap split without reading this
+whole file, there is a page for it at `/design`. It is generated from the same
+question definitions the app runs on.
 
-What actually decides the lane is where the difficulty sits:
+---
 
-**Section A is fifty checkboxes** — Range, Oven, Microwave, Trash Compactor, Sauna,
-Gazebo. Not one of them is hard to understand. The difficulty is purely
-*enumeration*: getting a long closed list out of your head. Speaking that list is
-slower than tapping it, less accurate, and gives the seller no way to scan for
-what they forgot. A grid is a better instrument than a conversation because the
-eye does in parallel what speech has to serialise. **Tap.**
+## The decision I actually spent my time on
 
-**Section C is sixteen questions** — "Any encroachments, easements or similar
-matters that may affect your interest in the subject property." A homeowner
-cannot answer that as written. The difficulty is *comprehension*, and the fix for
-comprehension is a conversation that rephrases, gives an example, and checks it
-landed. It is also where a bare yes is useless: the form demands the story, with
-dates and repair status, and typing a legal narrative at 10pm on a phone is the
-single most abandonable moment in the whole flow. **Speak.**
+The brief asks which parts of the form should be spoken and which should be
+tapped, and then to defend it. Here is the short version:
 
-That framing predicts the opposite of the intuitive one and is the one that
-survives contact with the actual form.
+**Speak when the hard part is understanding the question. Tap when the hard part
+is getting a long list out of your head.**
 
-### The full routing table
+I think the obvious answer — voice for the scary legal sections, tapping for the
+easy stuff — is wrong, and it took me a while to work out why.
 
-Every question carries its lane *and the reason*, as data
-(`app/tds/routing.py`, `app/tds/questions.py`). The `/design` page renders the
-table from the live spec, so it cannot drift from behaviour.
+Section A is about fifty checkboxes. Range, oven, microwave, trash compactor,
+gazebo, sauna. None of them are hard to understand. The difficulty is purely that
+there are fifty of them and you have to walk your house in your head. Reading
+fifty items aloud is slower than tapping them, easier to get wrong, and gives you
+no way to scan back for the one you forgot. So Section A is a grid.
 
-| Reason | Lane | Count | Where |
-|---|---|---|---|
-| **Enumeration** — closed set, many items, no ambiguity | Tap | 39 | Section A inventory, Section B component list |
-| **Comprehension** — the seller does not know what is being asked | **Voice** | 16 | All of Section C |
-| **Narrative** — the usable answer is a story with dates and status | **Voice** | 3 | Section A "not working", Section B explanation, Section C shared explanation |
-| **Precision** — an exact string, number or date | Tap | 7 | Address, room lists, remote count |
-| **Gate** — one binary that visibly opens or closes a section | Tap | 7 | Occupancy, Section A catch-all, Section B gate, garage, pool, hot tub |
-| **Compound** — one question, several sub-answers | Tap | 5 | Water heater / water supply / gas supply / pool heater fuels, garage attachment |
-| **Not the seller's question** | — | 4 | Section I, routed to the agent |
+Section C is sixteen questions like "any encroachments, easements or similar
+matters that may affect your interest in the subject property". A normal person
+can't answer that as written. The difficulty is working out what is being asked,
+and the fix for that is a conversation that can rephrase it, give an example, and
+check it landed. It is also the place where a bare yes is useless — the form
+wants the story, with dates and whether it got fixed — and typing that on a phone
+at 10pm is exactly where people give up. So Section C is voice.
 
-**Routing is a default, never a lock.** Every question renders its tap control
-regardless of lane, and the voice agent can answer any question in the graph.
-Both lanes write through one server-side path (`services.write_answer`), so an
-answer spoken and an answer tapped are the same row in the same table. That is
-what makes "start in one and finish in the other" true rather than aspirational —
-there is no second code path that could drift.
+The split ends up being 62 tap / 19 voice across 81 questions. Every question
+carries its lane *and the reason* as data, and `/design` renders the table from
+that, so the page can't drift away from what the code does.
 
-### Two things I moved off the seller entirely
+Two things I moved off the seller entirely:
 
-**Section I** (which inspection reports travel with the transfer) is in the agent
-view, not the seller's. Asking a homeowner that is asking them to do their
-agent's job.
+- **Section I** (which inspection reports travel with the transfer) is on the
+  agent's screen. Asking a homeowner that is asking them to do their agent's job.
+- **The order.** The printed form opens with Section I and buries the two
+  sections that carry real legal risk in tiny type on page two. I re-cut it into
+  eight chapters in the order a person can actually answer them.
 
-**Form order.** The printed form opens with Section I and buries the two
-questions carrying real legal risk in nine-point type on page two. The interview
-is re-cut into eight chapters ordered by what a person can actually answer:
-confirm the property, say whether you live there, sweep the inventory (fast, and
-it builds momentum), then the hard recall, then review.
+Routing is a default, not a lock. Every question still renders its tap control,
+and the voice agent can answer anything in the graph. Both go through one
+server-side write path, so an answer spoken and an answer tapped end up as the
+same row. That is what makes "start in one, finish in the other" real rather than
+a claim.
 
 ---
 
 ## The seller experience
 
-The person filling this in is stressed, not technical, and doing it at 10pm. Each
-of these is a specific answer to a specific way that goes wrong.
+The person filling this in is stressed, not technical, and doing it after work.
+Each of these is an answer to a specific way that goes wrong.
 
-**"What order should questions come in?"** Not form order — see above. Chapters
-open with a plain-language framing, and the fifty-item inventory is grouped into
-scannable grids (Kitchen and laundry, Safety and security, Pool and spa) rather
-than served one screen at a time.
+**They don't understand the question.** Every question has a "What does this
+mean?" with three layers: plain English, a concrete example in a homeowner's
+voice, then the actual statutory wording. The statutory wording is last but never
+removed — they're signing that sentence. Putting it first is what makes people
+quit.
 
-**"What if they don't understand a question?"** Every question has a "What does
-this mean?" affordance with three layers, each one click deeper: a plain-English
-gloss, a concrete example in a homeowner's own voice, and then the statutory
-wording. The statutory wording is last but never removed — they are signing that
-sentence, so hiding it would be dishonest, and putting it first is what makes
-people give up.
+**They don't know the answer.** "I'm not sure" is a real button, the same size as
+Yes and No. This is the most consequential decision in the whole data model. On a
+TDS, answering *No* when the truth is *I never checked* is how sellers get sued.
+So an unknown is stored as its own thing, and when it reaches the form **both
+boxes are left blank**, which is what a careful person would do on paper. There
+are tests for this because I broke it once already (see below).
 
-**"What if they don't know the answer?"** **"I'm not sure" is a first-class
-answer**, given the same visual weight as Yes and No rather than hidden behind a
-link. This is the single most consequential decision in the data model. On a TDS,
-answering *No* when the honest answer is *I never checked* is how sellers create
-liability for themselves. So `AnswerStatus.UNKNOWN` is not `False` and not
-absent, and when it reaches the form **both statutory boxes are left clear** —
-which is exactly what a careful seller would do on paper. There is a test for it.
-
-**"What if they contradict an answer from three questions ago?"** Sixteen
-consistency rules specific to this form (`app/tds/rules.py`) — septic tank *and*
-public sewer, a child-resistant pool barrier with no pool, a gas water heater
-with no gas supply, an HOA with no CC&Rs, unpermitted work that is somehow
-code-compliant. They are split into `hard` (cannot both be true, blocks
-submission) and `soft` (unusual, probably a slip, but legitimate).
-
-Nothing blocks at the moment of the contradiction. Interrupting someone mid-recall
-to argue about something they said forty minutes ago is how you lose them at 10pm,
-and the form is not filed yet. Conflicts are detected on write, queued, and
-brought back at review **phrased as a question, with both answers shown and
-neither pre-selected**:
+**They contradict themselves.** Sixteen rules specific to this form — septic tank
+*and* public sewer, a pool barrier with no pool, a gas water heater with no gas
+supply, an HOA with no CC&Rs. Nothing blocks at the moment it happens; arguing
+with someone mid-recall about something they said forty minutes ago is how you
+lose them. Conflicts get queued and come back at the review screen, phrased as a
+question with both answers shown and neither pre-selected:
 
 > You told us the house is on both a public sewer and a septic tank. Almost every
 > home has one or the other. Which is it?
 
-Soft flags additionally offer "Both are right, leave them", because sometimes
-they are. Flags that stop firing close themselves — fixing a contradiction should
-not also require dismissing the warning about it.
+Soft ones also offer "Both are right, leave them", because sometimes they are.
+And once you've settled one, it stays settled — it doesn't pop back on the next
+answer you type.
 
-**"How do they know how much is left?"** Chapter-level progress plus **an estimate
-in minutes**, not "38 of 150 fields". A count that large reads as a threat, and it
-is also a lie: most of those 150 fields are unreachable for any given property.
-Progress is measured over the questions *this* seller will actually be asked,
-recomputed as gating opens and closes follow-ups.
+**How much is left.** Chapters plus a time estimate, not "38 of 150 fields". That
+number is frightening and also a lie, because most of those fields don't apply to
+any given house. Progress is measured over the questions *this* seller will
+actually be asked.
 
-**"What if they close the tab halfway through?"** Every answer is a `PUT` the
-moment it changes — there is no Save button, because the seller should not have
-to know that saving is a thing that happens. The server writes a resume cursor on
-every write, so closing the tab costs at most the question currently on screen.
-Returning shows a chapter-by-chapter summary and drops them back where they were.
+**They close the tab.** Every answer saves the moment it changes. There is no
+save button, because nobody should have to know that saving is a thing. The
+server tracks where they were, so closing the tab costs you the question you were
+on and nothing else.
 
 ---
 
-## Data model, and why it is shaped that way
+## Data model
 
 ```
-agents ──< deals ──< disclosure_sessions ──< answers          (current value, unique per question)
-                                          ├─< answer_events   (append-only, every write ever)
-                                          ├─< access_tokens   (the seller's credential, hashed)
-                                          ├─< flags           (contradictions awaiting a decision)
-                                          └─< voice_sessions  (cost ceiling + audit)
+agents ─< deals ─< disclosure_sessions ─< answers          current value, one row per question
+                                       ├─< answer_events   append-only, every write ever made
+                                       ├─< access_tokens   the seller's link, stored hashed
+                                       ├─< flags           contradictions waiting on a decision
+                                       └─< voice_sessions  cost ceiling and audit
 ```
 
-### Why answers and events are separate tables
-
-A TDS is a sworn statement, and two questions get asked of it that pull in
-opposite directions.
-
-*"What is the answer?"* — cheap against a current-value table, an expensive fold
-over an event log. It is asked on every render and every PDF.
-
-*"What did the seller say, and when, and through which channel?"* — impossible
-against a current-value table alone. It is asked once, in a dispute, when it
-matters enormously.
-
-So `answers` holds exactly one row per `(session, question)` under a unique
-constraint and is upserted, and `answer_events` is append-only and retains every
-write including the superseded ones, with the lane it came from, the actor, and
-the voice transcript it was extracted from. The agent's **History** tab is that
+The split between `answers` and `answer_events` is the part worth explaining. Two
+questions get asked of a disclosure and they pull opposite ways. "What is the
+answer" gets asked on every page render and every PDF — cheap against a current
+value table, expensive against an event log. "What did the seller say, when, and
+through which channel" gets asked once, in a dispute, and is impossible against a
+current-value table. So I keep both. The agent's History tab is just that second
 table.
 
-### "What breaks when a seller answers the same question twice?"
+### What happens when someone answers the same question twice
 
-Nothing breaks, and three things happen:
+- The `answers` row is upserted, so there's one current value and no ambiguity
+  about what prints. `revision` goes up.
+- An event row is appended with the old value next to the new one.
+- If the new answer *disagrees* with the old one and came from the other lane, a
+  flag is raised instead of the last write silently winning.
 
-1. The `answers` row is **upserted**, so there is exactly one current value and
-   no ambiguity about what prints on the form. `revision` increments.
-2. An `answer_events` row is appended with the previous value alongside the new
-   one. Nothing is lost.
-3. If the new value **disagrees** with the old one *and arrived from a different
-   lane*, a flag is raised rather than letting the last writer silently win.
-
-That third point is the interesting one. A seller who taps *No* and then tells the
-voice agent "well, actually, yes" has not made a mistake — they have remembered
-something. The later answer stands, because it is later; but the disagreement is
-surfaced at review so a human decides which one they meant. Silently overwriting
-would lose a real signal, and blocking would punish them for remembering.
-
-Concurrency between the lanes is handled the same way: both go through
-`write_answer`, the client sends the `revision` it thought it was editing, and the
-response says whether the other lane had already moved on.
+That last one matters. Someone who taps No and then tells the voice agent "well,
+actually, yes" hasn't made a mistake — they've remembered something. The later
+answer stands because it's later, but the disagreement surfaces at review so a
+human decides. Overwriting silently loses a real signal; blocking punishes them
+for remembering.
 
 ---
 
 ## Auth
 
-### Agents: email and password
+**Agents** get email and password, Argon2id hashed. Login creates a row in
+`agent_sessions` and sets an HttpOnly, SameSite=Lax, Secure cookie holding a
+256-bit random token; only the SHA-256 of it is stored. It's a server-side
+session rather than a JWT on purpose — you can't revoke a stateless token before
+it expires, and "log this person out now" is table stakes for something that
+opens legal documents.
 
-Argon2id password hashing. A successful login creates a row in `agent_sessions`
-and sets an **HttpOnly, SameSite=Lax, Secure** cookie holding a 256-bit random
-token; only the SHA-256 of that token is stored.
+**Sellers get no password at all.** Making a stressed homeowner create an account
+at 10pm to fill in a form their agent sent them is how you lose them before
+question one. The link *is* the credential: 256 bits of randomness, stored only
+as a hash, scoped to one disclosure, expiring in 14 days, and revocable from the
+deal page.
 
-Deliberately a server-side session, not a JWT. A stateless token cannot be
-revoked before it expires, and "log this person out now" is a requirement for a
-tool that opens legal documents. Login failures take the same path whether the
-email or the password was wrong.
+### "What if someone guesses a seller's URL?"
 
-### Sellers: no password at all
+They don't. 2^256 isn't a guessable space, and since only the hash is stored, a
+dump of the token table doesn't give you working links either. Wrong, revoked and
+expired all return the same 404, so you can't probe for whether a token was real.
 
-Requiring a stressed homeowner to create an account at 10pm to fill in a form
-their agent sent them is how you lose them before question one. **The link is the
-credential**: 256 bits of URL-safe randomness, stored only as a SHA-256 hash,
-scoped to exactly one disclosure session, expiring in 14 days, revocable and
-rotatable by the agent from the deal page.
+The honest risk isn't guessing, it's the link leaking — a forwarded text, a
+shared screen — because anyone holding it is treated as the seller. What I do
+about that: no PII in the URL, `Referrer-Policy: no-referrer`, `Cache-Control:
+no-store` on seller routes, every use logged with IP and shown to the agent as
+"last opened at", one-click revoke and reissue, and voice sessions rate-limited
+per disclosure so a leaked link can't burn the API budget.
 
-### "What happens if someone guesses a seller's URL?"
-
-They do not. 2^256 is not a guessable space, and the token is compared against a
-hash, so a dump of `access_tokens` does not yield working links either. Wrong,
-revoked and expired tokens all return the same 404, so a stranger cannot learn
-that a token was ever real.
-
-The honest risk is not guessing, it is **leakage** — a forwarded text, a shared
-screen, a referrer header — because anyone holding the link is treated as the
-seller. What is done about it:
-
-- no PII in the URL, and `Referrer-Policy: no-referrer` on every response
-- `Cache-Control: no-store` on all seller routes
-- every use recorded with IP, user-agent and a running count, shown to the agent
-  as "last opened at…"
-- one-click revoke-and-reissue, which invalidates the old link immediately
-- voice sessions rate-limited per disclosure, so a leaked link cannot be used to
-  burn the OpenAI budget
-
-**What I did not build, and would in production:** an emailed one-time code in
-front of the *signature* step specifically. That is the point where the link
-stops being a convenience and becomes a legally binding act, and a bearer link is
-not enough identity assurance for it. It is a known gap, not a missing one.
+What I didn't build: an emailed one-time code in front of the *signature* step.
+That's where the link stops being a convenience and becomes a legal act, and a
+bearer link isn't enough identity for it. It's a gap, and I'd rather say so than
+have it look like an oversight.
 
 ---
 
-## Mapping answers to form fields
+## Mapping answers onto the form
 
-### The PDF is not flat
+### The PDF isn't flat
 
-The brief says the attached PDF is flat with no fillable fields. It is not — it
-ships with a complete AcroForm: **159 placed widgets** across three pages. That
-turned out to matter more than a trivia point, because the AcroForm has two
-defects that make the form **impossible to fill correctly through field values**:
+The brief says the attached PDF is flat with no fillable fields. It isn't — it
+has a full AcroForm with 159 placed widgets. That turned out to matter, because
+the AcroForm has two defects that make the form **impossible to fill correctly
+by field value**:
 
-1. **`Solar` is one field owning two widgets** — one on the Pool/Spa Heater line,
-   one on the Water Heater line. An AcroForm value is per *field*, so setting
-   `Solar` checks both boxes. A solar pool heater and a gas water heater cannot
-   be expressed at all.
-2. **`Other2Describe` owns two widgets** that need *different* text (a
-   15-character inline stub and a full-width continuation line).
+1. `Solar` is one field with two widgets on it — one on the Pool/Spa Heater line
+   and one on the Water Heater line. An AcroForm value is per field, so setting
+   `Solar` ticks both. A solar pool heater with a gas water heater literally
+   cannot be expressed.
+2. `Other2Describe` owns two widgets that need different text.
 
-So bindings address a **widget** — name plus an occurrence index assigned in
-reading order — rather than a field name. `Solar#0` is always the pool heater box
-and `Solar#1` is always the water heater box, regardless of how the PDF stores
-its annotations. Both the DocuSeal template and the local renderer work from that
-addressing, and there is a test that pins it.
+So bindings address a *widget* — name plus an occurrence index in reading order —
+not a field name. `Solar#0` is always the pool heater box, `Solar#1` is always
+the water heater box. There's a test pinning it, and you can see it come out
+right on the live DocuSeal document.
 
 ### Coverage
 
-Every one of the 159 widgets is accounted for, checked on every boot and in CI:
+All 159 widgets are accounted for, and it's checked on every boot:
 
 | | |
 |---|---|
-| Bound to seller/agent questions | 133 |
-| Owned by a signer role (signatures, initials, dates, party names) | 26 |
-| **Unhandled** | **0** |
+| Bound to questions | 133 |
+| Owned by a signer role | 26 |
+| Unhandled | 0 |
 
-`app/tds/fieldmap.py::validate()` fails the app's startup if any binding
-addresses a widget that does not exist, or writes text into a checkbox. A
-mistyped field name is the one failure that would otherwise be *silent* — you get
-a form that looks filled and is not.
+`validate()` fails startup if a binding points at a widget that doesn't exist, or
+writes text into a checkbox. A mistyped field name is the one failure that would
+otherwise be silent — you get a form that looks filled and isn't.
 
-### Compound and shared-explanation fields
+### Compound fields and the shared explanation
 
-- "Water Heater: Gas / Solar / Electric" is **one question with a multi-select**,
-  not three checkboxes. Same for garage, water supply, gas supply, pool heater.
-  A parent box like `PoolSpaHeater` uses `CheckAny`, so it lights up only when a
-  real fuel was chosen — not merely because the question was answered.
-- Section C's sixteen questions share **one explanation area made of five ruled
-  lines of differing widths**. Sellers do not think in ruled lines, so the app
-  collects one narrative and `WrappedText` lays it out with a variable-width
-  greedy wrapper.
-- **Nothing is silently truncated.** If the text does not fit, the last visible
-  line gets a continuation marker and the full answer is carried onto a generated
-  **addendum page** — the form's own "attach additional sheets if necessary"
-  escape hatch. The addendum *restates the answer in full* under a section
-  heading rather than continuing mid-sentence, because a continuation sheet that
-  opens halfway through a word is not a usable disclosure.
+"Water Heater: Gas / Solar / Electric" is one question with a multi-select, not
+three checkboxes. Same for garage, water supply, gas supply, pool heater.
 
-### Gating is enforced server-side
-
-`resolve()` refuses to print an answer whose question is not currently visible.
-A pool heater answer cannot survive the seller going back and saying there is no
-pool. The browser evaluates the same `dependsOn` strings from the same spec for
-instant show/hide, but the server is authoritative.
+Section C's sixteen questions share one explanation area made of five ruled lines
+of different widths. Sellers don't think in ruled lines, so the app takes one
+narrative and lays it out. Nothing gets silently cut: if it doesn't fit, the last
+line gets a continuation marker and the full answer goes onto a generated
+addendum page, restated in full under a section heading rather than continuing
+mid-sentence.
 
 ---
 
 ## DocuSeal
 
-**Verified end to end against the live sandbox** — template created, submission
-prefilled, signed, and the completed PDF downloaded.
+Verified end to end against the free sandbox — template built, submission
+prefilled, signed, completed PDF downloaded. Nothing was paid for.
 
-- Template `5507359`, 168 fields, six signer roles.
-- Account is on the free **Developer Sandbox** tier: `$0/document`, free
-  unlimited API for testing. Nothing was paid for.
+I build the template from measured coordinates rather than letting DocuSeal
+inherit the PDF's form fields, because inheriting them would reproduce both
+defects above. It also means the three agent signature lines — which the form
+prints with no fields behind them at all — can be declared from the page's own
+vector geometry and come out as real signable fields.
 
-### Building the template from coordinates, not from the AcroForm
-
-Uploading the PDF and letting DocuSeal inherit its form fields would reproduce
-both defects above. Declaring fields from measured geometry gives every box its
-own name and its own value — the only way this form can be filled correctly — and
-`flatten: true` removes the source AcroForm so there is no second, broken set of
-inputs behind the real ones.
-
-Widget rectangles are PDF points with a bottom-left origin; DocuSeal areas are
-fractions of the page with a top-left origin:
+Widget rects are PDF points from the bottom-left; DocuSeal wants fractions from
+the top-left:
 
 ```python
 x = x0 / 612                  w = (x1 - x0) / 612
 y = (792 - y1) / 792          h = (y1 - y0) / 792
 ```
 
-### The three signature lines the PDF forgot
+On signer roles: the brief says five, I modelled six (Seller, Co-Seller, Buyer,
+Co-Buyer, Listing Agent, Selling Agent). The difference is whether the second
+Seller and Buyer lines are one role signing twice or two parties. I read them as
+two — a co-owner is a separate signatory with their own date — and a submission
+just omits the roles a deal doesn't need.
 
-The form prints "Agent (Broker Representing Seller) ___ By ___ Date ___" twice
-and "Agent (Broker Obtaining the Offer)" once — **with no fields behind any of
-them**. Because the template is built from coordinates, those are simply declared
-from rules measured out of the page's own vector content, and come out as real
-signable fields.
+Answers go into DocuSeal read-only. By then the seller has answered and reviewed
+everything here; DocuSeal is where they sign, not a second chance to retype a
+legal disclosure.
 
-**On the count of signer roles:** the brief says five. I modelled **six** —
-Seller, Co-Seller, Buyer, Co-Buyer, Listing Agent, Selling Agent. The difference
-is whether the second Seller and Buyer lines are read as one role signing twice
-or as distinct parties. They are distinct: a co-owner is a separate legal
-signatory with their own date. A submission simply omits the roles a given deal
-does not need.
-
-### Answers go in read-only
-
-By the time a submission is created the seller has already answered everything
-here and reviewed it. DocuSeal is a signing ceremony, not a second chance to
-retype a legal disclosure, so every prefilled field is pushed with
-`readonly: true`.
-
-### It works without DocuSeal too
-
-With no API key the app falls back to rendering the filled PDF locally
-(`app/tds/fill.py`) and says so. Clone this with no credentials at all and you
-still get a working seller flow and a correct completed form. The local renderer
-*stamps* values using the AcroForm purely as a coordinate source — the same
-approach, and the same reason.
+**It works without DocuSeal too.** No API key and the app renders the filled PDF
+locally and tells you so. Clone this with no credentials and you still get a
+working seller flow and a correct completed form.
 
 ---
 
 ## Voice
 
-Browser-only, over WebRTC to the OpenAI realtime API. No phone, no phone number,
-no server in the audio path.
+Runs in the browser over WebRTC to the OpenAI realtime API. No phone, no phone
+number, no server in the audio path.
 
-- **The standing API key never reaches the browser.** The server mints a
-  short-lived client secret scoped to one session; that is the only credential
-  the page holds.
-- **The model proposes, the server validates.** `record_answer` arguments are
-  checked against the question graph server-side: unknown ids are rejected, ids
-  that are not *currently visible* are rejected, and values are coerced into the
-  shape the question can hold. Invalid multi-select options are dropped rather
-  than stored. The browser is not a trusted writer just because a model is
-  driving it.
-- **Hedging becomes `unknown`, never `no`.** "Not sure", "maybe", "I don't know"
-  all land as UNKNOWN. The prompt explicitly forbids talking a seller into a yes
-  or a no.
-- **Cost is bounded**: a hard ceiling on session length, a per-disclosure hourly
-  cap, and `gpt-realtime-2.1-mini` by default. A public demo with an unbounded
-  realtime socket is an unbounded bill, and a seller link is by design shareable.
-- Turn detection is semantic VAD with **low eagerness**, because sellers pause
-  mid-sentence while they remember, and cutting them off at the pause is the
-  fastest way to make a voice UI feel hostile.
+- The real API key never reaches the browser. The server mints a short-lived
+  client secret scoped to one session.
+- The model proposes, the server decides. Tool call arguments are re-checked
+  server-side: unknown question ids rejected, questions that aren't currently
+  being asked rejected, values coerced into what the question can hold. The
+  browser isn't trusted just because a model is driving it.
+- Hedging becomes "unknown", never "no". The prompt explicitly forbids talking
+  someone into a yes or a no.
+- Cost is bounded: hard session cap, per-disclosure hourly limit,
+  `gpt-realtime-2.1-mini` by default. A public demo with an unbounded realtime
+  socket is an unbounded bill, and a seller link is shareable by design.
 
 ---
 
-## Architecture
+## What I got wrong
 
-FastAPI + SQLAlchemy + Postgres (SQLite locally), React + TypeScript + Vite built
-into `app/static` and served by the same process — one service, no CORS, no
-second origin to secure.
+I had this reviewed before submitting and it found real problems. The ones worth
+admitting, because they're the interesting ones:
 
-```
-app/
-  tds/          the form model, and the only place that knows what a TDS is
-    routing.py    lane decisions + the rationale behind each, as data
-    questions.py  the question graph: 81 questions, 9 chapters
-    bindings.py   answer value -> widget writes (incl. the collision handling)
-    fieldmap.py   widget geometry, validation, resolution
-    gating.py     the dependsOn grammar, mirrored in the browser
-    rules.py      16 consistency rules specific to this form
-    fill.py       local PDF renderer + addendum
-    roles.py      who signs what, incl. the three lines the PDF omits
-  services.py   the single write path for both lanes
-  auth.py       agent sessions and seller links
-  docuseal.py   template construction and submissions
-web/src/        the two views
-```
+- **"I don't know" was printing as a tick.** I stored unknowns as the string
+  `"unknown"`, and `bool("unknown")` is `True`, so on the ~43 plain checkbox
+  questions it checked the box. The exact failure the design was built to
+  prevent, in the code meant to prevent it.
+- **The voice agent went silent after one answer.** The realtime API doesn't
+  generate a turn off the back of a tool result, and I never sent
+  `response.create`. It recorded the first answer and stopped. This is why the
+  fix is now in the code and why there's a note about it here rather than a
+  claim that voice always worked.
+- **A local SQLite file was being pushed to this public repo.** `*.db` in
+  .gitignore doesn't match `loqol.db-wal`, and in WAL mode the sidecar is where
+  the rows live. Purged from history, and the ignore rule is fixed.
+- **Section I had no UI at all.** The route existed, nothing called it, so every
+  form would have gone out with Section I blank.
+- **A dismissed contradiction came back on the next keystroke** and permanently
+  deadlocked sending for signature.
 
-The question graph is **sent to the browser**, not re-declared there. One
-definition of what the questions are, what gates them and which lane they default
-to means the form UI, the voice agent's tool schema and the PDF renderer cannot
-disagree about the form.
+All of those have regression tests now (`tests/test_audit_regressions.py`), one
+per defect, named after what it would have done to a seller.
 
 ---
 
-## Setup
+## Running it
 
 ```bash
 git clone https://github.com/Noctilucenty/loqol-tds && cd loqol-tds
@@ -420,57 +323,54 @@ cd web && npm install && npm run build && cd ..
 .venv/bin/python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Open http://localhost:8000, click **Use the demo account**, create a deal, hit
-**Create link**, open it. That is the seller flow.
+Then http://localhost:8000 and click "Try it without signing up".
 
-Everything is optional in `.env`:
+Everything in `.env` is optional:
 
 ```bash
-OPENAI_API_KEY=sk-...          # without it, voice turns itself off and says so
-DOCUSEAL_API_KEY=...           # without it, the PDF renders locally instead
+OPENAI_API_KEY=sk-...          # without it voice turns itself off and says so
+DOCUSEAL_API_KEY=...           # without it the PDF renders locally instead
 DOCUSEAL_TEMPLATE_ID=5507359   # or run scripts/create_docuseal_template.py
 SECRET_KEY=...                 # required in production
 DATABASE_URL=postgresql://...  # defaults to SQLite
 ```
 
 ```bash
-.venv/bin/python -m pytest -q                       # 42 tests
+.venv/bin/python -m pytest -q                         # 61 tests
 .venv/bin/python scripts/create_docuseal_template.py  # build the template
 .venv/bin/python scripts/extract_widgets.py           # re-extract PDF geometry
 ```
 
+Deployment notes are in [DEPLOY.md](DEPLOY.md). It's one Docker service — the
+React app builds into `app/static` and FastAPI serves it, so there's no CORS and
+no second origin.
+
 ---
 
-## What I'd build next, and what I knowingly left out
+## What I'd do next, and what I left out
 
-**Next, in order:**
+Next, in order:
 
-1. **Email OTP before signature.** The one real gap in the auth story. See above.
-2. **Resumable voice.** Today a voice session starts fresh each time. It should
-   pick up mid-sentence with the transcript of what was already covered.
-3. **Agent-side reconciliation.** Agents see flags but resolve them by editing
-   answers. They should get the seller's own reconciliation cards, and be able to
-   send one question back rather than reopening the whole disclosure.
-4. **The other California forms.** The question-graph/bindings split is form-
-   agnostic; only `questions.py` and `tds_widgets.json` are TDS-specific. SPQ and
-   the NHD would reuse everything else.
-5. **Real-time cross-lane sync.** The two lanes reconcile on write, but a form
-   open in one tab does not live-update when the voice agent answers in another.
+1. **Email OTP before signing.** The one real hole in the auth story.
+2. **Addendum on the signed document.** Right now, if an explanation is too long
+   for the ruled lines, the local preview gets an addendum page but sending for
+   signature refuses rather than shipping something truncated. The fix is a
+   per-submission template that includes the addendum page.
+3. **Resumable voice.** A voice session starts fresh each time; it should pick up
+   knowing what's already been covered.
+4. **The other California forms.** Only `questions.py` and the widget map are
+   TDS-specific. SPQ and NHD would reuse everything else.
 
-**Knowingly left out:**
+Knowingly left out:
 
-- **Buyer and agent signing.** The template defines all six roles, but a
+- **Buyer and agent signing.** All six roles are in the template, but a
   submission only invites the seller side. Buyer acknowledgment is a later event
-  in the transaction and modelling it properly means modelling the transaction.
-- **Section D** (smoke detector / water heater bracing affirmations) has no form
-  fields — it is printed text the seller affirms by signing. Nothing to collect.
-- **Multi-unit TDS.** The duplex/triplex checkbox and unit list are captured in
-  the agent view, but a genuine four-unit filing needs four forms and a
-  per-unit answer set.
+  and modelling it properly means modelling the transaction.
+- **Section D** has no fields — it's printed text the seller affirms by signing.
+  Nothing to collect.
+- **Multi-unit filings.** The duplex checkbox is captured, but a real four-unit
+  filing needs four forms and four answer sets.
 - **Emailing the seller their link.** The agent copies it. Wiring transactional
-  email is plumbing, and it is the least interesting thing here.
-- **Offline drafts.** Answers save per-change over the network. A seller in a
-  basement with no signal loses the current question, not the session.
-- **Signature images on API auto-sign.** Auto-signing via the API marks a
-  submission complete without drawing a signature; the browser flow draws it.
-  Used only to verify the loop.
+  email is plumbing and the least interesting thing here.
+- **Offline drafts.** Answers save over the network per change. No signal means
+  you lose the current question, not the session.

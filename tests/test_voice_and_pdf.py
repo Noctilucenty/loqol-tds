@@ -93,10 +93,20 @@ SYSTEM = {"property_address": "1247 Sepulveda Blvd", "disclosure_date": "2026-08
 
 
 def test_the_rendered_pdf_is_flat():
-    """The output is a record, not a form. No viewer should offer to fill it."""
+    """The output is a record, not a form. No viewer should offer to fill it.
+
+    `get_fields()` alone is not a real check - it reads the document catalog, so
+    deleting /AcroForm makes it pass while every widget dictionary is still in
+    the file. The byte-level assertion is the one that can actually fail.
+    """
     fields, _ = resolve({"A.range": True, "P.occupying": "is"})
-    reader = PdfReader(io.BytesIO(render(fields, system=SYSTEM)))
+    pdf = render(fields, system=SYSTEM)
+    reader = PdfReader(io.BytesIO(pdf))
+
     assert reader.get_fields() in (None, {})
+    assert "/AcroForm" not in reader.trailer["/Root"]
+    assert not any("/Annots" in page for page in reader.pages)
+    assert b"/Widget" not in pdf, "orphaned widget dictionaries survived the flatten"
     assert len(reader.pages) == 3
 
 

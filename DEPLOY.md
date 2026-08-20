@@ -1,8 +1,7 @@
 # Deploying
 
-Currently live at **https://loqol-tds.onrender.com** (Render free tier, Oregon,
-Docker runtime, free Postgres). Free instances sleep after inactivity, so the
-first request after an idle spell takes around 30 seconds.
+Currently live at **https://loqol-tds.onrender.com** (Render Starter, Oregon, Docker
+runtime, Postgres). The instance stays warm, so there is no cold-start delay.
 
 One service. The React app is built into `app/static` at build time and served by
 the same FastAPI process, so there is no CORS to configure and no second origin
@@ -51,5 +50,7 @@ uvicorn app.main:app --host 0.0.0.0 --port $PORT
   and logs every agent out; the app warns about this on boot.
 - `DATABASE_URL` must not be SQLite. Render's disk is ephemeral, so a SQLite
   database silently disappears on redeploy. The app warns about this too.
+- `*.db-wal` and `*.db-shm` are gitignored alongside `*.db`. In WAL mode the
+  sidecar holds the rows, and `*.db` alone does not match it.
 - The startup hook fails the boot if any TDS field binding is invalid, because a
   mistyped field name produces a form that looks filled and is not.

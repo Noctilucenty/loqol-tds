@@ -17,10 +17,15 @@ from ..models import (
     DisclosureSession, Flag, FlagState, SessionStatus, utcnow,
 )
 from ..schemas import AnswerIn, DealIn, DealOut, FlagOut, form_spec
-from ..services import answers_dict, progress, sync_flags, unanswered_required, write_answer
+from ..services import (
+    FrozenDisclosure, answers_dict, progress, settle_flag, sync_flags,
+    unanswered_required, write_answer,
+)
+from ..tds.values import ValueError_
 from ..tds.fieldmap import resolve
 from ..tds.fill import render
 from ..tds.questions import QUESTIONS_BY_ID
+from ..tds.roles import ROLE_LABELS
 from ..tds.rules import RULES
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
@@ -78,7 +83,8 @@ def _deal_out(db: Session, deal: Deal) -> DealOut:
 
 
 @router.get("/form-spec")
-def agent_form_spec():
+def agent_form_spec(agent: Agent = Depends(current_agent)):
+    """Requires a session. It was the one agent route left unauthenticated."""
     return form_spec("agent")
 
 
@@ -219,13 +225,18 @@ def agent_answer(
     """The agent filling in Section I, or correcting an answer at review."""
     deal = _owned_deal(db, deal_id, agent)
     ds = _session_for(db, deal)
-    write_answer(
-        db, ds.id, body.question_id, body.value,
-        status=AnswerStatus(body.status),
-        source=AnswerSource.AGENT,
-        actor=agent.id,
-        advance_cursor=False,
-    )
+    try:
+        write_answer(
+            db, ds.id, body.question_id, body.value,
+            status=AnswerStatus(body.status),
+            source=AnswerSource.AGENT,
+            actor=agent.id,
+            advance_cursor=False,
+        )
+    except FrozenDisclosure as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except (ValueError_, ValueError) as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     return {"ok": True}
 
 
@@ -285,7 +296,39 @@ def send_for_signature(
             "or use the local preview.",
         )
 
-    fields, _ = resolve(answers)
+    if ds.docuseal_submission_id and ds.status in (
+        SessionStatus.SENT_FOR_SIGNATURE, SessionStatus.COMPLETED
+    ):
+        # Without this a retry creates a second, independently signable copy of
+        # the same disclosure, and whichever one the seller signs may not be the
+        # one this deal is tracking.
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {
+                "error": "Already sent for signature",
+                "submission_id": ds.docuseal_submission_id,
+                "hint": "Open the existing signing link rather than creating a second copy.",
+            },
+        )
+
+    fields, overflow = resolve(answers)
+    if overflow:
+        # The template is three fixed pages with nowhere to put a continuation
+        # sheet. Sending anyway would put the seller's signature on a document
+        # ending mid-sentence, pointing at an attachment that does not exist.
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {
+                "error": "An answer is too long for the printed form",
+                "detail": (
+                    "These need a continuation sheet, which the signature template "
+                    "cannot carry yet. Shorten them, or use the local preview, "
+                    "which does include the addendum."
+                ),
+                "answers": [b.split("\n", 1)[0] for b in overflow],
+            },
+        )
+
     values = values_for_submission(fields, {
         "property_address": deal.property_address,
         "disclosure_date": date.today().isoformat(),
@@ -327,8 +370,17 @@ def signature_status(deal_id: str, db: Session = Depends(get_db), agent: Agent =
     except DocuSealError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
 
-    submitters = data.get("submitters", [])
-    if all(s.get("status") == "completed" for s in submitters if s.get("role", "").startswith("Seller")):
+    submitters = data.get("submitters") or []
+    # Every seller-side party must have signed, and there must be at least one.
+    # `all()` over an empty generator is True, which flipped a disclosure to
+    # "Signed" on the first poll whenever DocuSeal returned no submitters. And
+    # "Co-Seller" never matched a startswith("Seller") test, so a co-owner's
+    # missing signature counted as complete.
+    seller_side = [
+        sub for sub in submitters
+        if (sub.get("role") or "") in (ROLE_LABELS["seller"], ROLE_LABELS["co_seller"])
+    ]
+    if seller_side and all(sub.get("status") == "completed" for sub in seller_side):
         ds.status = SessionStatus.COMPLETED
         db.commit()
     return {
@@ -354,8 +406,10 @@ def resolve_flag(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Flag not found")
     ds = db.get(DisclosureSession, flag.session_id)
     _owned_deal(db, ds.deal_id, agent)
-    flag.state = FlagState.DISMISSED if body.get("action") == "dismiss" else FlagState.RESOLVED
-    flag.resolution = {"note": body.get("note", ""), "by": agent.id}
-    flag.resolved_at = utcnow()
-    db.commit()
+    settle_flag(
+        db, flag,
+        state=FlagState.DISMISSED if body.get("action") == "dismiss" else FlagState.RESOLVED,
+        note=body.get("note", ""),
+        by=agent.id,
+    )
     return {"ok": True}

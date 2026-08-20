@@ -55,4 +55,12 @@ def seller_link(client):
         "seller_name": "Dana Whitfield", "seller_email": "dana@example.com",
     }).json()
     url = client.post(f"/api/agent/deals/{deal['id']}/link").json()["url"]
-    return {"deal_id": deal["id"], "token": url.rsplit("/", 1)[-1]}
+    # The session id matters: the database persists across tests, so a query by
+    # question_id alone would match rows another test wrote.
+    session_id = client.get(f"/api/agent/deals/{deal['id']}/review").json()["deal"]["session_id"]
+    return {
+        "deal_id": deal["id"],
+        "token": url.rsplit("/", 1)[-1],
+        "session_id": session_id,
+        "client": client,
+    }

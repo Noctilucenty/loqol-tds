@@ -29,9 +29,10 @@ from ..auth import resolve_seller_token
 from ..config import settings
 from ..db import get_db
 from ..models import AnswerSource, AnswerStatus, Deal, VoiceSession, utcnow
-from ..services import answers_dict, next_question_id, write_answer
+from ..services import FrozenDisclosure, answers_dict, next_question_id, write_answer
 from ..tds.gating import is_visible
 from ..tds.questions import CHAPTERS_BY_ID, QUESTIONS_BY_ID, SELLER_QUESTIONS
+from ..tds.values import ValueError_, coerce
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
@@ -259,15 +260,20 @@ def voice_answer(token: str, body: dict, request: Request, db: Session = Depends
         )
 
     raw_status = body.get("status", "answered")
-    value = body.get("value")
-    value, coerced_status = _coerce(q, value, raw_status)
+    try:
+        value, coerced_status = _coerce(q, body.get("value"), raw_status)
+    except ValueError_ as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
-    row = write_answer(
-        db, ds.id, qid, value,
-        status=AnswerStatus(coerced_status),
-        source=AnswerSource.VOICE,
-        transcript=body.get("transcript"),
-    )
+    try:
+        row = write_answer(
+            db, ds.id, qid, value,
+            status=AnswerStatus(coerced_status),
+            source=AnswerSource.VOICE,
+            transcript=body.get("transcript"),
+        )
+    except FrozenDisclosure as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     answers = answers_dict(db, ds.id)
     return {
         "ok": True,
@@ -280,38 +286,10 @@ def voice_answer(token: str, body: dict, request: Request, db: Session = Depends
 
 
 def _coerce(q, value, status_hint: str) -> tuple:
-    """Force a model-supplied value into the shape the question actually holds."""
-    if status_hint == "unknown" or (isinstance(value, str) and value.strip().lower() in
-                                    {"unknown", "not sure", "don't know", "dont know"}):
-        return (None if q.kind != "tri" else "unknown"), "unknown"
-    if status_hint == "skipped":
-        return None, "skipped"
+    """Delegate to the one place that knows what a question can hold.
 
-    match q.kind:
-        case "tri":
-            if isinstance(value, bool):
-                return ("yes" if value else "no"), "answered"
-            v = str(value).strip().lower()
-            if v in {"yes", "y", "true"}:
-                return "yes", "answered"
-            if v in {"no", "n", "false"}:
-                return "no", "answered"
-            return "unknown", "unknown"
-        case "bool":
-            if isinstance(value, bool):
-                return value, "answered"
-            return str(value).strip().lower() in {"yes", "y", "true"}, "answered"
-        case "multi":
-            valid = {o.id for o in q.options}
-            items = value if isinstance(value, list) else [value]
-            return [str(v) for v in items if str(v) in valid], "answered"
-        case "single":
-            valid = {o.id for o in q.options}
-            return (str(value) if str(value) in valid else None), "answered"
-        case "int":
-            try:
-                return int(value), "answered"
-            except (TypeError, ValueError):
-                return None, "unknown"
-        case _:
-            return ("" if value is None else str(value)), "answered"
+    This used to be a second, subtly different implementation. Its `bool` branch
+    turned anything it did not recognise into `False` with status "answered" - so
+    "Yes, there is a public sewer" printed a No on a legal disclosure.
+    """
+    return coerce(q, value, status_hint)

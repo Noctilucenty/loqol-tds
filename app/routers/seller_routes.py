@@ -20,8 +20,12 @@ from ..models import (
 from ..schemas import AnswerIn, form_spec
 from ..tds.questions import QUESTIONS_BY_ID
 from ..services import (
-    answers_dict, next_question_id, progress, sync_flags, unanswered_required, write_answer,
+    FrozenDisclosure, answers_dict, next_question_id, progress, settle_flag, sync_flags,
+    unanswered_required, write_answer,
 )
+from ..tds.gating import is_visible
+from ..tds.questions import CHAPTERS_BY_ID, QUESTIONS_BY_ID
+from ..tds.values import ValueError_
 from ..tds.rules import RULES
 
 router = APIRouter(prefix="/api/s", tags=["seller"])
@@ -30,6 +34,27 @@ RULES_BY_ID = {r.id: r for r in RULES}
 
 def _session(token: str, request: Request, db: Session) -> DisclosureSession:
     return resolve_seller_token(db, token, request)
+
+
+def _seller_may_answer(question_id: str, answers: dict) -> None:
+    """The seller may only write questions their own flow actually asks.
+
+    Existing in the graph is not enough. Section I belongs to the agent, and a
+    question whose gate is currently shut is not being asked at all. The voice
+    lane already refused both cases; the tap lane accepted them.
+    """
+    q = QUESTIONS_BY_ID.get(question_id)
+    if q is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unknown question {question_id!r}")
+    if CHAPTERS_BY_ID[q.chapter].audience != "seller":
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            f"{question_id} is completed by the agent, not the seller",
+        )
+    if not is_visible(q, answers):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, f"{question_id} is not currently being asked"
+        )
 
 
 def _state(db: Session, ds: DisclosureSession) -> dict:
@@ -105,11 +130,7 @@ def put_answer(
     each write.
     """
     ds = _session(token, request, db)
-    if ds.status in (SessionStatus.SENT_FOR_SIGNATURE, SessionStatus.COMPLETED):
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            "This disclosure has already been sent for signature. Contact your agent to reopen it.",
-        )
+    _seller_may_answer(body.question_id, answers_dict(db, ds.id))
 
     existing = db.scalar(
         select(Answer).where(
@@ -126,10 +147,15 @@ def put_answer(
         row = write_answer(
             db, ds.id, body.question_id, body.value,
             status=AnswerStatus(body.status),
-            source=AnswerSource(body.source),
+            # The lane is decided here, not by the client. Letting a request
+            # label itself "agent" both corrupts the audit trail and defeats the
+            # cross-lane conflict detector, whose only trigger is a source change.
+            source=AnswerSource.FORM,
             transcript=body.transcript,
         )
-    except ValueError as exc:
+    except FrozenDisclosure as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except (ValueError_, ValueError) as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
     return {
@@ -163,6 +189,18 @@ def commit_group(
     if not ids:
         return _state(db, ds)
 
+    current = answers_dict(db, ds.id)
+    # Only plain yes/no inventory tiles carry an implied "no". Writing False into
+    # a statutory Yes/No pair would leave both boxes clear while still counting
+    # as answered, so the completeness gate would wave through a blank Section B.
+    ids = [
+        qid for qid in ids
+        if QUESTIONS_BY_ID[qid].kind == "bool"
+        and CHAPTERS_BY_ID[QUESTIONS_BY_ID[qid].chapter].audience == "seller"
+        and is_visible(QUESTIONS_BY_ID[qid], current)
+    ]
+    if not ids:
+        return _state(db, ds)
     already = {
         row.question_id
         for row in db.scalars(
@@ -224,6 +262,7 @@ def resolve_flag(
 
     qid = body.get("questionId")
     if qid:
+        _seller_may_answer(qid, answers_dict(db, ds.id))
         write_answer(
             db, ds.id, qid, body.get("value"),
             status=AnswerStatus(body.get("status", "answered")),
@@ -231,8 +270,5 @@ def resolve_flag(
             advance_cursor=False,
         )
 
-    flag.state = FlagState.RESOLVED
-    flag.resolution = {"note": body.get("note", ""), "by": "seller"}
-    flag.resolved_at = utcnow()
-    db.commit()
+    settle_flag(db, flag, state=FlagState.RESOLVED, note=body.get("note", ""), by="seller")
     return _state(db, ds)

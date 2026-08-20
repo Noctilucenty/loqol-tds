@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import "./agent.css";
 
-const DEMO = { email: "agent@loqol.ai", password: "disclosure-demo-1" };
-
 export function Login() {
   const nav = useNavigate();
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -12,27 +10,30 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const submit = async (e: React.FormEvent, override?: typeof DEMO) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const body = override ?? form;
     try {
-      await api.post(`/api/auth/${override ? "login" : mode}`, body);
+      await api.post(`/api/auth/${mode}`, form);
       nav("/agent");
     } catch (err: any) {
-      // The seeded demo account may not exist yet on a fresh database.
-      if (override && err.status === 401) {
-        try {
-          await api.post("/api/auth/register", { ...DEMO, name: "Demo Agent", brokerage: "Loqol" });
-          nav("/agent");
-          return;
-        } catch (e2: any) {
-          setError(e2.message);
-        }
-      } else {
-        setError(err.message);
-      }
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Each visitor gets their own throwaway agent and their own deals, so there
+   *  is no shared credential to publish and no shared state to walk into. */
+  const startDemo = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.post("/api/auth/demo");
+      nav("/agent");
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setBusy(false);
     }
@@ -95,9 +96,12 @@ export function Login() {
           </button>
 
           <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: ".6rem" }}
-                  onClick={(e) => submit(e as any, DEMO)} disabled={busy}>
-            Use the demo account
+                  onClick={startDemo} disabled={busy}>
+            Try it without signing up
           </button>
+          <p className="tiny muted" style={{ marginTop: ".5rem", textAlign: "center" }}>
+            Creates a private demo workspace with one sample deal. No email needed.
+          </p>
 
           <p className="tiny muted" style={{ marginTop: "1.3rem", textAlign: "center" }}>
             {mode === "login" ? "No account yet?" : "Already have one?"}{" "}
