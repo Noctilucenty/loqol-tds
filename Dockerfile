@@ -32,4 +32,7 @@ RUN useradd --create-home --uid 10001 loqol && chown -R loqol:loqol /srv
 USER loqol
 
 EXPOSE 8000
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# --proxy-headers: Render terminates TLS at its edge and forwards
+# X-Forwarded-Proto. Without this, request.base_url reports http, and the seller
+# link the agent copies is a plain-http URL to a legal document.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]

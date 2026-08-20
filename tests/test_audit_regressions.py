@@ -441,3 +441,12 @@ def test_dates_print_in_us_format():
     from datetime import date
     from app.tds.fill import us_date
     assert us_date(date(2026, 8, 20)) == "08/20/2026"
+
+
+def test_the_seller_link_is_never_plain_http_in_production(client, seller_link, monkeypatch):
+    """It is a bearer credential for a legal document. Behind a TLS-terminating
+    proxy the app sees http even though the browser used https."""
+    r = client.post(f"/api/agent/deals/{seller_link['deal_id']}/link",
+                    headers={"X-Forwarded-Proto": "https"})
+    assert r.status_code == 200
+    assert r.json()["url"].startswith("https://"), r.json()["url"]

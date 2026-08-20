@@ -126,6 +126,14 @@ def create_link(
     ds = _session_for(db, deal)
     raw = issue_seller_link(db, ds.id)
     base = str(request.base_url).rstrip("/")
+    # The link is a bearer credential for a legal document, so it must not go out
+    # as plain http. Behind a TLS-terminating proxy the app sees http even though
+    # the browser used https; trust the forwarded scheme, and never downgrade.
+    forwarded = request.headers.get("x-forwarded-proto", "").split(",")[0].strip()
+    if forwarded == "https" and base.startswith("http://"):
+        base = "https://" + base[len("http://"):]
+    elif settings().is_production and base.startswith("http://"):
+        base = "https://" + base[len("http://"):]
     return {"url": f"{base}/s/{raw}", "expires_days": settings().seller_link_ttl_days}
 
 
