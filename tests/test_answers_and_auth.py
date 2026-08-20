@@ -149,7 +149,7 @@ def test_agent_endpoints_require_a_session(client):
 def test_an_agent_cannot_reach_another_agents_deal(client, seller_link):
     other = client.__class__(client.app)
     other.post("/api/auth/register", json={
-        "email": "stranger@example.com", "password": "disclosure-demo-1", "name": "Stranger",
+        "email": "stranger@example.com", "password": "pytest-only-not-a-real-password", "name": "Stranger",
     })
     r = other.get(f"/api/agent/deals/{seller_link['deal_id']}/review")
     assert r.status_code == 404, "404 rather than 403, so deal ids cannot be probed"

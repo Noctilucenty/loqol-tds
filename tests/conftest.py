@@ -47,7 +47,7 @@ def seller_link(client):
 
     email = f"agent-{uuid.uuid4().hex[:8]}@loqol.ai"
     client.post("/api/auth/register", json={
-        "email": email, "password": "disclosure-demo-1", "name": "Alex Marchetti",
+        "email": email, "password": "pytest-only-not-a-real-password", "name": "Alex Marchetti",
     })
     deal = client.post("/api/agent/deals", json={
         "property_address": "1247 Sepulveda Blvd, Culver City, CA 90230",
