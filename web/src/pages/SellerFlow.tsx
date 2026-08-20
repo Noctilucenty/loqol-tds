@@ -5,7 +5,7 @@ import { Answering, ToggleGrid } from "../components/Answering";
 import { VoicePanel } from "../components/VoicePanel";
 import { Explain } from "../components/Explain";
 import { Reconcile } from "../components/Reconcile";
-import { buildSteps, stepIsComplete, type Step } from "../lib/gating";
+import { buildSteps, isAnswered, isVisible, stepIsComplete, type Step } from "../lib/gating";
 import type { SellerBootstrap, SellerState } from "../types";
 import "./seller.css";
 
@@ -145,6 +145,14 @@ export function SellerFlow() {
   const index = found >= 0 ? found : Math.min(lastKnown.current, Math.max(steps.length - 1, 0));
   const step = steps[Math.min(index, steps.length - 1)];
 
+  // How far through the spoken questions the seller is, so the panel can show a
+  // finish line rather than an open-ended conversation.
+  const voiceQuestions = form.questions.filter(
+    (q) => q.lane === "voice" && isVisible(q, answers),
+  );
+  const voiceTotal = voiceQuestions.length;
+  const voiceCovered = voiceQuestions.filter((q) => isAnswered(answers, q.id)).length;
+
   /** Leaving a grid commits the implied "no" for every tile left untouched, so
    *  the stored answer set is explicit rather than relying on absence.
    *
@@ -192,23 +200,6 @@ export function SellerFlow() {
       </header>
 
       <main className="wrap wrap-narrow seller-main">
-        {step?.kind === "intro" && chapter && (
-          <section className="rise stack" style={{ ["--gap" as any]: "1rem" }}>
-            <div className="eyebrow">
-              Section {form.chapters.filter((c) => c.audience === "seller" && c.id !== "review")
-                .findIndex((c) => c.id === chapter.id) + 1}
-            </div>
-            <h1>{chapter.title}</h1>
-            <p className="lede">{chapter.blurb}</p>
-            {chapter.id === "awareness" && (
-              <p className="lede">
-                These are the sixteen questions the state requires. Most people have not thought
-                about half of them. Take them one at a time, and say so whenever you are not sure.
-              </p>
-            )}
-          </section>
-        )}
-
         {step?.kind === "group" && (
           <section className="rise stack">
             <div className="eyebrow">{chapter?.title}</div>
@@ -235,7 +226,16 @@ export function SellerFlow() {
             answers={answers}
             onAnswer={answer}
             onVoiceAnswer={refresh}
+            onVoiceFinished={() => {
+              refresh();
+              // Speaking is finished; move them on rather than leaving them
+              // parked on a question the assistant already answered.
+              const next = steps[Math.min(index + 1, steps.length - 1)];
+              if (next) setStepKey(next.key);
+            }}
             chapterTitle={chapter?.title ?? ""}
+            voiceCovered={voiceCovered}
+            voiceTotal={voiceTotal}
           />
         )}
 
@@ -284,14 +284,20 @@ function QuestionStep({
   answers,
   onAnswer,
   onVoiceAnswer,
+  onVoiceFinished,
   chapterTitle,
+  voiceCovered,
+  voiceTotal,
 }: {
   token: string;
   question: any;
   answers: any;
   onAnswer: (id: string, v: unknown, s?: "answered" | "unknown") => void;
   onVoiceAnswer: () => void;
+  onVoiceFinished: () => void;
   chapterTitle: string;
+  voiceCovered: number;
+  voiceTotal: number;
 }) {
   const voiceLane = question.lane === "voice";
   return (
@@ -303,7 +309,9 @@ function QuestionStep({
         <VoicePanel
           token={token}
           onAnswerRecorded={onVoiceAnswer}
-          onFinished={onVoiceAnswer}
+          onFinished={onVoiceFinished}
+          covered={voiceCovered}
+          total={voiceTotal}
         />
       )}
 

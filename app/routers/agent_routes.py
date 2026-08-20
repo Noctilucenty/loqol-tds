@@ -18,7 +18,7 @@ from ..models import (
 )
 from ..schemas import AnswerIn, DealIn, DealOut, FlagOut, form_spec
 from ..services import (
-    FrozenDisclosure, answers_dict, progress, settle_flag, sync_flags,
+    FrozenDisclosure, answers_dict, progress, seed_from_deal, settle_flag, sync_flags,
     unanswered_required, write_answer,
 )
 from ..tds.values import ValueError_
@@ -49,6 +49,7 @@ def _session_for(db: Session, deal: Deal) -> DisclosureSession:
         row = DisclosureSession(deal_id=deal.id)
         db.add(row)
         db.commit()
+    seed_from_deal(db, row.id, deal)
     return row
 
 

@@ -20,8 +20,8 @@ from ..models import (
 from ..schemas import AnswerIn, form_spec
 from ..tds.questions import QUESTIONS_BY_ID
 from ..services import (
-    FrozenDisclosure, answers_dict, next_question_id, progress, settle_flag, sync_flags,
-    unanswered_required, write_answer,
+    FrozenDisclosure, answers_dict, next_question_id, progress, seed_from_deal, settle_flag,
+    sync_flags, unanswered_required, write_answer,
 )
 from ..tds.gating import is_visible
 from ..tds.questions import CHAPTERS_BY_ID, QUESTIONS_BY_ID
@@ -76,7 +76,10 @@ def _state(db: Session, ds: DisclosureSession) -> dict:
         "sellerName": deal.seller_name,
         "agentName": deal.agent.name if deal.agent else "",
         "status": ds.status.value,
-        "cursor": ds.cursor_question_id or next_question_id(answers),
+        # Only where the seller actually left off. Falling back to "first
+        # unanswered" made a fresh session skip the address confirmation, because
+        # the address is seeded from the deal and therefore already answered.
+        "cursor": ds.cursor_question_id,
         "answers": {
             qid: {
                 "value": r.value.get("v"),
@@ -107,6 +110,8 @@ def _state(db: Session, ds: DisclosureSession) -> dict:
 def open_disclosure(token: str, request: Request, db: Session = Depends(get_db)):
     """Everything needed to render the seller experience, in one round trip."""
     ds = _session(token, request, db)
+    # Backfill for disclosures created before the address was seeded.
+    seed_from_deal(db, ds.id, db.get(Deal, ds.deal_id))
     return {"form": form_spec("seller"), **_state(db, ds)}
 
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
 import { Answering } from "./Answering";
+import { isAnswered, type AnswerMap } from "../lib/gating";
 import type { FormSpec, SellerState } from "../types";
 import "./reconcile.css";
 
@@ -32,9 +33,29 @@ export function Reconcile({
   const [result, setResult] = useState<{ ok: boolean } | null>(null);
 
   const byId = Object.fromEntries(form.questions.map((q) => [q.id, q]));
+  const answers = state.answers as AnswerMap;
   const hard = state.flags.filter((f) => f.severity === "hard");
   const soft = state.flags.filter((f) => f.severity !== "hard");
   const blocked = hard.length > 0 || state.missingRequired.length > 0;
+
+  /** Which questions a flag actually wants the seller to act on.
+   *
+   *  A rule names every question it inspects, but only some of them are the
+   *  problem. "Section B is Yes but the explanation is empty" names both the
+   *  Yes/No gate and the explanation - showing the gate is showing the one thing
+   *  that is already answered, which reads as nonsense. Prefer the unanswered
+   *  ones, and fall back to the whole set when everything is filled in and the
+   *  contradiction is between two real values. */
+  const questionsNeeding = (ids: string[]) => {
+    const present = ids.map((id) => byId[id]).filter(Boolean);
+    const empty = present.filter((q) => !isAnswered(answers, q.id));
+    return empty.length ? empty : present;
+  };
+
+  // A question raised by a flag is handled there, with copy that explains why.
+  // Listing it again under "Still needed" is the same ask twice in two voices.
+  const coveredByFlag = new Set(state.flags.flatMap((f) => f.questionIds));
+  const stillNeeded = state.missingRequired.filter((id) => !coveredByFlag.has(id));
 
   const saveAnswer = async (questionId: string, value: unknown, status = "answered") => {
     const next = await api.put<SellerState>(`/api/s/${token}/answers`, {
@@ -72,12 +93,17 @@ export function Reconcile({
       <section className="rise gate">
         <div className="eyebrow">Done</div>
         <h1 className="gate-title">That's everything.</h1>
+        {/* No email promise. Nothing in this app sends one, and DocuSeal is
+            called with send_email disabled - telling a seller to wait for a
+            message that never arrives is worse than telling them nothing. */}
         <p className="lede">
-          Your disclosure has gone to {state.agentName || "your agent"} for review. They will send
-          it back to you to sign, and you will get an email when it is ready.
+          Your disclosure has gone to {state.agentName || "your agent"} for review. They will look
+          it over and send it back to you to sign.
         </p>
         <p className="lede muted small">
-          You can close this tab. Nothing else is needed from you right now.
+          You can close this tab. If you remember something or spot a mistake, this same link
+          still works &mdash; come back and change your answer any time before it is sent for
+          signature.
         </p>
       </section>
     );
@@ -97,20 +123,19 @@ export function Reconcile({
         </p>
       )}
 
-      {state.missingRequired.length > 0 && (
+      {stillNeeded.length > 0 && (
         <div className="rec rec-open">
           <div className="rec-head">
             <span className="chip chip-brass">Still needed</span>
           </div>
           <p className="rec-q">
-            {state.missingRequired.length} question
-            {state.missingRequired.length === 1 ? "" : "s"} still{" "}
-            {state.missingRequired.length === 1 ? "needs" : "need"} an answer.
+            {stillNeeded.length} question{stillNeeded.length === 1 ? "" : "s"} still{" "}
+            {stillNeeded.length === 1 ? "needs" : "need"} an answer.
           </p>
           {/* Answerable here rather than listed. Sending someone back through
               twelve screens to find three gaps is the whole reason forms get
               abandoned at the last step. */}
-          {state.missingRequired.map((id) => {
+          {stillNeeded.map((id) => {
             const q = byId[id];
             if (!q) return null;
             return (
@@ -128,7 +153,7 @@ export function Reconcile({
       )}
 
       {[...hard, ...soft].map((flag) => {
-        const question = flag.questionIds.map((id) => byId[id]).find(Boolean);
+        const questions = questionsNeeding(flag.questionIds);
         return (
           <div key={flag.id} className={`rec ${flag.severity === "hard" ? "rec-hard" : "rec-soft"}`}>
             <div className="rec-head">
@@ -139,8 +164,8 @@ export function Reconcile({
             <p className="rec-q">{flag.prompt || flag.message}</p>
             <p className="rec-detail small muted">{flag.message}</p>
 
-            {question && (
-              <div className="rec-fix">
+            {questions.map((question) => (
+              <div className="rec-fix" key={question.id}>
                 <div className="tiny muted rec-fix-label">{question.prompt}</div>
                 <Answering
                   question={question}
@@ -148,7 +173,7 @@ export function Reconcile({
                   onAnswer={(v, s) => resolve(flag.id, question.id, v, s ?? "answered")}
                 />
               </div>
-            )}
+            ))}
 
             {flag.severity !== "hard" && (
               <button className="btn btn-quiet" onClick={() => resolve(flag.id)}>

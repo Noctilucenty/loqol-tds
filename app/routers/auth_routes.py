@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from ..auth import create_agent_session, current_agent, hash_password, revoke_agent_session, verify_password
 from ..config import settings
 from ..db import get_db
+from ..services import seed_from_deal
 from ..models import Agent, Deal, DisclosureSession
 from ..schemas import AgentOut, LoginIn, RegisterIn
 
@@ -89,8 +90,10 @@ def demo(response: Response, request: Request, db: Session = Depends(get_db)):
     )
     db.add(deal)
     db.commit()
-    db.add(DisclosureSession(deal_id=deal.id))
+    session = DisclosureSession(deal_id=deal.id)
+    db.add(session)
     db.commit()
+    seed_from_deal(db, session.id, deal)
 
     _set_cookie(response, create_agent_session(db, agent, request.headers.get("user-agent", "")))
     return AgentOut(id=agent.id, email=agent.email, name=agent.name, brokerage=agent.brokerage)

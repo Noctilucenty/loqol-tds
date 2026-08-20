@@ -50,3 +50,27 @@
 .turn-assistant p { color: #b9b3a5; font-family: var(--serif); font-size: 1rem; }
 
 .voice-saved { margin-top: .8rem; color: #8d887b !important; }
+
+.voice-count { background: rgba(236,231,220,.12) !important; color: #d8d2c4 !important; border-color: transparent !important; }
+
+.voice-progress {
+  height: 2px; margin-top: .9rem; border-radius: 999px;
+  background: rgba(236,231,220,.14); overflow: hidden;
+}
+.voice-progress span {
+  display: block; height: 100%; border-radius: 999px;
+  background: var(--brass); transition: width 420ms var(--ease);
+}
+
+.voice-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; margin-top: .95rem; padding-top: .85rem;
+  border-top: 1px solid rgba(236,231,220,.12);
+}
+.voice-hint { color: #a8a396; }
+.voice-done {
+  background: rgba(236,231,220,.1); color: #ece7dc;
+  border: 1px solid rgba(236,231,220,.22);
+  padding: .45rem .9rem; font-size: .85rem; white-space: nowrap;
+}
+.voice-done:hover { background: rgba(236,231,220,.18); }

@@ -66,7 +66,6 @@ export function isAnswered(answers: AnswerMap, id: string): boolean {
 /* ---------------- step model ---------------- */
 
 export type Step = (
-  | { kind: "intro"; chapterId: string }
   | { kind: "group"; chapterId: string; group: string; questions: Question[] }
   | { kind: "question"; chapterId: string; question: Question }
   | { kind: "review" }
@@ -96,8 +95,10 @@ export function buildSteps(questions: Question[], chapters: { id: string }[], an
     );
     if (inChapter.length === 0) continue;
 
-    steps.push({ kind: "intro", chapterId: chapter.id, key: `intro:${chapter.id}` });
-
+    // No chapter-intro screen. A screen with nothing to answer on it is a click
+    // the seller has to spend to learn something the label above the next
+    // question already tells them - eight of them across the interview, which is
+    // most of the distance to the voice questions.
     let i = 0;
     while (i < inChapter.length) {
       const q = inChapter[i];

@@ -12,6 +12,11 @@ interface Props {
   onAnswerRecorded: (questionId: string) => void;
   onFinished: () => void;
   disabled?: boolean;
+  /** Spoken questions answered so far, and how many there are in total. The
+   *  seller needs to see the end coming; an open-ended conversation with no
+   *  visible finish line is the thing people bail out of. */
+  covered?: number;
+  total?: number;
 }
 
 interface SessionInfo { clientSecret: string; model: string; maxSeconds: number }
@@ -26,7 +31,9 @@ interface SessionInfo { clientSecret: string; model: string; maxSeconds: number 
  * a model is driving it. The server re-checks the question exists, is currently
  * visible, and coerces the value into the shape the form can hold.
  */
-export function VoicePanel({ token, onAnswerRecorded, onFinished, disabled }: Props) {
+export function VoicePanel({
+  token, onAnswerRecorded, onFinished, disabled, covered = 0, total = 0,
+}: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -271,12 +278,18 @@ export function VoicePanel({ token, onAnswerRecorded, onFinished, disabled }: Pr
           </div>
         </div>
 
-        {live && secondsLeft !== null && (
-          <span className="chip chip-sage voice-timer">
-            {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}
+        {total > 0 && (
+          <span className="chip voice-count" title="Questions in this section">
+            {covered} of {total}
           </span>
         )}
       </div>
+
+      {live && total > 0 && (
+        <div className="voice-progress" aria-hidden>
+          <span style={{ width: `${Math.min(100, (covered / total) * 100)}%` }} />
+        </div>
+      )}
 
       {error && <div className="voice-error small">{error}</div>}
 
@@ -291,7 +304,24 @@ export function VoicePanel({ token, onAnswerRecorded, onFinished, disabled }: Pr
         </div>
       )}
 
-      {saved.length > 0 && (
+      {live && (
+        <div className="voice-actions">
+          <span className="tiny voice-hint">
+            {covered >= total && total > 0
+              ? "That is all of them. You can finish here."
+              : `${Math.max(total - covered, 0)} left in this section${
+                  secondsLeft !== null && secondsLeft < 90
+                    ? ` \u00b7 ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")} of talking time`
+                    : ""
+                }`}
+          </span>
+          <button type="button" className="btn voice-done" onClick={() => stop(true)}>
+            {covered >= total && total > 0 ? "Done" : "Stop and finish by tapping"}
+          </button>
+        </div>
+      )}
+
+      {!live && saved.length > 0 && (
         <div className="voice-saved tiny muted">
           Saved as you go: {saved.length} answer{saved.length === 1 ? "" : "s"} recorded.
         </div>
