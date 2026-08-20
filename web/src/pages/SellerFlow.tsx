@@ -28,6 +28,11 @@ export function SellerFlow() {
    *  from before the tap that preceded it and writing the implied "no" over a
    *  real answer. Serialising here means arrival order is send order, and it
    *  also stops an older response from setState-ing over a newer one. */
+  //: Last step index we actually resolved. Declared here with the other hooks -
+  //: it is read further down, past several early returns, and a hook after a
+  //: conditional return changes the hook count between renders (React #310).
+  const lastKnown = useRef(0);
+
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const enqueue = useCallback(<T,>(job: () => Promise<T>): Promise<T> => {
     const run = queue.current.then(job, job);
@@ -136,7 +141,6 @@ export function SellerFlow() {
   // position and fall forward. Clamping a -1 to 0 teleported the seller back to
   // the very first screen mid-interview.
   const found = steps.findIndex((s) => s.key === stepKey);
-  const lastKnown = useRef(0);
   if (found >= 0) lastKnown.current = found;
   const index = found >= 0 ? found : Math.min(lastKnown.current, Math.max(steps.length - 1, 0));
   const step = steps[Math.min(index, steps.length - 1)];

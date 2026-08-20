@@ -306,6 +306,10 @@ admitting, because they're the interesting ones:
   form would have gone out with Section I blank.
 - **A dismissed contradiction came back on the next keystroke** and permanently
   deadlocked sending for signature.
+- And while fixing all that I shipped a React hooks-order bug that blanked the
+  whole seller flow. That one is why `scripts/smoke.mjs` now exists: the Python
+  tests never rendered a page, so nothing caught it. It walks the real flow in a
+  browser and fails on any page error.
 
 All of those have regression tests now (`tests/test_audit_regressions.py`), one
 per defect, named after what it would have done to a seller.
@@ -337,6 +341,7 @@ DATABASE_URL=postgresql://...  # defaults to SQLite
 
 ```bash
 .venv/bin/python -m pytest -q                         # 61 tests
+npx playwright install chromium && node scripts/smoke.mjs   # browser walk-through
 .venv/bin/python scripts/create_docuseal_template.py  # build the template
 .venv/bin/python scripts/extract_widgets.py           # re-extract PDF geometry
 ```
