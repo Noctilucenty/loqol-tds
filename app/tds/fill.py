@@ -121,13 +121,15 @@ def render(
         c.save()
         overlays.append(buf.getvalue())
 
-    writer = PdfWriter()
-    for i, page in enumerate(reader.pages):
+    # Clone into the writer *before* merging. pypdf only guarantees a correct
+    # merge for pages already owned by a writer; stamping a detached reader page
+    # happens to work and is documented as unreliable.
+    writer = PdfWriter(clone_from=reader)
+    for i, page in enumerate(writer.pages):
         overlay = PdfReader(io.BytesIO(overlays[i])).pages[0]
         page.merge_page(overlay)
         # Drop the interactive layer: the output is a record, not a form.
         page.pop("/Annots", None)
-        writer.add_page(page)
 
     if overflow:
         _append_addendum(writer, overflow, system)
