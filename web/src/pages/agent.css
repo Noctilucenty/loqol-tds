@@ -125,3 +125,10 @@
 .history-change { font-size: .85rem; color: var(--ink-soft); }
 .history-change del { color: var(--ink-faint); text-decoration-thickness: 1px; }
 .history-change ins { text-decoration: none; color: var(--ink); font-weight: 500; }
+
+.panel-empty {
+  padding: 1.35rem 1.4rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--paper-sunk);
+}

@@ -75,8 +75,14 @@ export function Design() {
         {groups.map(([why, questions]) => (
           <section key={why} className="design-block">
             <div className="design-block-head">
-              <span className={`chip ${questions[0].lane === "voice" ? "chip-brass" : ""}`}>
-                {questions[0].lane === "voice" ? "Voice" : "Tap"}
+              <span className={`chip ${
+                why === "agent_owned" ? "chip-sage" : questions[0].lane === "voice" ? "chip-brass" : ""
+              }`}>
+                {why === "agent_owned"
+                  ? "Agent"
+                  : questions[0].lane === "voice"
+                    ? "Voice"
+                    : "Tap"}
               </span>
               <h2>{WHY_LABEL[why] ?? why}</h2>
               <span className="tiny muted">{questions.length} questions</span>

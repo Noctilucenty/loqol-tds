@@ -119,6 +119,16 @@ export function DealDetail() {
               </div>
             </div>
 
+            {tab === "answers" && review.progress.answered === 0 && (
+              <div className="panel-empty">
+                <p className="muted small" style={{ margin: 0 }}>
+                  Nothing submitted yet. Send {review.deal.seller_name.split(" ")[0]} the link and
+                  their answers will appear here as they go — you do not have to wait for them to
+                  finish.
+                </p>
+              </div>
+            )}
+
             {tab === "answers" && chapters.map((c) => {
               const qs = form.questions.filter((q) => q.chapter === c.id && review.answers[q.id]);
               if (!qs.length) return null;
