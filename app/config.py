@@ -14,6 +14,7 @@ from __future__ import annotations
 import secrets
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -47,6 +48,19 @@ class Settings(BaseSettings):
     #: with an unbounded realtime socket is an unbounded bill.
     voice_session_max_seconds: int = 600
     voice_sessions_per_hour: int = 12
+
+    @field_validator("docuseal_api_key", "docuseal_template_id", "openai_api_key", mode="before")
+    @classmethod
+    def _blank_is_unset(cls, v):
+        """An empty environment variable means "not configured", not a parse error.
+
+        Hosting dashboards routinely hand over `KEY=` for a value someone cleared,
+        and crashing the whole app on boot because an optional integer was blank
+        is a worse failure than running without the feature it enables.
+        """
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
 
     @property
     def voice_enabled(self) -> bool:
