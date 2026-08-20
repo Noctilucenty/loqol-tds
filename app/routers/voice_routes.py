@@ -118,8 +118,12 @@ def build_tools(answers: dict) -> list[dict]:
                     "question_id": {"type": "string", "enum": ids or ["none"]},
                     "value": {
                         "description": (
-                            "yes, no, or unknown for yes/no questions. The seller's "
-                            "own words, cleaned up, for descriptions."
+                            "For a yes/no question this must be exactly \"yes\", "
+                            "\"no\" or \"unknown\" - one word, no sentence, no "
+                            "explanation. Put what they actually said in "
+                            "`transcript` instead. For a description question, "
+                            "give the seller's own words tidied up. For a "
+                            "multiple-choice question, give a list of option ids."
                         ),
                         "type": ["string", "boolean", "array", "number", "null"],
                     },

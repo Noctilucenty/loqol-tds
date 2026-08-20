@@ -271,3 +271,35 @@ def test_flattening_removes_the_widgets_not_just_the_catalog_entry():
     pdf = render(fields, system=SYSTEM)
     assert b"/Widget" not in pdf
     assert len(pdf) < 450_000, "orphaned form objects were left behind"
+
+
+# ---------------------------------------------------------------------------
+# What the realtime model actually sends back
+# ---------------------------------------------------------------------------
+
+def test_a_spoken_sentence_is_read_as_the_answer_it_obviously_is():
+    """The model returns prose even when the schema asks for one word.
+
+    Observed live: asked "any environmental hazards?", it answered with
+    `value="No hazards like asbestos, lead paint... have ever turned up"`. That
+    is unambiguously a no. Filing it as unknown would silently drop a clear
+    answer the seller gave out loud.
+    """
+    q = QUESTIONS_BY_ID["C.hazards"]
+    assert coerce(q, "No hazards like asbestos or lead paint have ever turned up.", "answered") \
+        == ("no", "answered")
+    assert coerce(q, "Yes, actually. We share the back fence with the neighbour.", "answered") \
+        == ("yes", "answered")
+    assert coerce(q, "Nothing like that has ever come up.", "answered") == ("no", "answered")
+
+
+def test_polarity_is_only_read_off_the_front_of_the_sentence():
+    """"The neighbour said no when we asked" is not the seller saying no."""
+    q = QUESTIONS_BY_ID["C.hazards"]
+    assert coerce(q, "The neighbour said no when we asked", "answered")[1] == "unknown"
+
+
+def test_a_hedged_sentence_stays_unsure_however_it_ends():
+    q = QUESTIONS_BY_ID["C.encroachments"]
+    assert coerce(q, "I'm not sure whether the shed crosses the line", "answered") \
+        == ("unknown", "unknown")

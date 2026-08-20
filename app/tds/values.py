@@ -33,6 +33,7 @@ TRUE_WORDS = {
 }
 FALSE_WORDS = {
     "no", "n", "false", "nope", "nah", "negative", "none", "0", "off", "unchecked",
+    "nothing", "never", "neither",
 }
 UNSURE_WORDS = {
     "unknown", "not sure", "unsure", "i don't know", "i dont know", "dont know",
@@ -50,7 +51,34 @@ def _word(value: Any) -> str:
 
 
 def _looks_unsure(value: Any) -> bool:
-    return _word(value) in UNSURE_WORDS
+    text = _word(value)
+    if text in UNSURE_WORDS:
+        return True
+    # "I'm not sure whether the shed is on the line" is hedged, however it ends.
+    return any(text.startswith(phrase) for phrase in UNSURE_WORDS)
+
+
+def _leading_polarity(value: Any) -> bool | None:
+    """Read yes/no off the front of a sentence, or None if it does not start there.
+
+    A realtime model asked for "yes or no" will often hand back the whole
+    sentence: "No hazards like asbestos or lead paint have ever turned up." That
+    is unambiguously a no, and treating it as unparseable would quietly drop a
+    clear answer the seller actually gave. Only the *leading* token counts -
+    "the neighbour said no" must not read as a denial.
+    """
+    text = _word(value)
+    if not text:
+        return None
+    head = text.replace(",", " ").replace(".", " ").split()
+    if not head:
+        return None
+    first = head[0]
+    if first in TRUE_WORDS:
+        return True
+    if first in FALSE_WORDS:
+        return False
+    return None
 
 
 def coerce(question: Question, value: Any, status: str = "answered") -> tuple[Any, str]:
@@ -77,6 +105,9 @@ def coerce(question: Question, value: Any, status: str = "answered") -> tuple[An
                 return "yes", "answered"
             if w in FALSE_WORDS:
                 return "no", "answered"
+            polarity = _leading_polarity(value)
+            if polarity is not None:
+                return ("yes" if polarity else "no"), "answered"
             return "unknown", "unknown"
 
         case "bool":
@@ -87,6 +118,9 @@ def coerce(question: Question, value: Any, status: str = "answered") -> tuple[An
                 return True, "answered"
             if w in FALSE_WORDS:
                 return False, "answered"
+            polarity = _leading_polarity(value)
+            if polarity is not None:
+                return polarity, "answered"
             # Deliberately not False. An unreadable answer is not a denial.
             return None, "unknown"
 
