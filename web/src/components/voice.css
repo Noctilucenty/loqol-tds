@@ -1,0 +1,52 @@
+.voice {
+  background: linear-gradient(168deg, #1b1e17 0%, #12140f 100%);
+  color: #ece7dc;
+  border-radius: var(--r-lg);
+  padding: 1.15rem 1.25rem;
+  box-shadow: var(--shadow-md);
+  transition: box-shadow 240ms var(--ease);
+}
+.voice.is-live { box-shadow: 0 0 0 1px rgba(154,123,79,.4), 0 20px 50px rgba(20,22,15,.28); }
+
+.voice-head { display: flex; align-items: center; gap: 1rem; }
+.voice-copy { flex: 1; min-width: 0; }
+.voice-title { font-family: var(--serif); font-size: 1.12rem; letter-spacing: -.01em; }
+.voice-sub { color: #a8a396 !important; margin-top: .1rem; line-height: 1.45; }
+.voice-timer { background: rgba(236,231,220,.12) !important; color: #d8d2c4 !important; }
+
+.orb {
+  position: relative; flex: none;
+  width: 54px; height: 54px; border-radius: 999px;
+  display: grid; place-items: center;
+  background: var(--brass); color: #fff; border: none;
+  transition: background 200ms var(--ease), transform 140ms var(--ease);
+}
+.orb:hover:not(:disabled) { background: #ab8a5b; }
+.orb:disabled { opacity: .6; cursor: progress; }
+.orb.is-live { background: var(--clay); }
+.orb-ring {
+  position: absolute; inset: -6px; border-radius: 999px;
+  border: 1.5px solid rgba(154,123,79,.5);
+  transition: transform 90ms linear; pointer-events: none;
+}
+.orb.is-live .orb-ring { border-color: rgba(162,79,52,.55); }
+.orb.is-connecting .orb-ring { animation: pulse 1.3s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity:.3 } 50% { opacity:1 } }
+
+.voice-error {
+  margin-top: .85rem; padding: .6rem .8rem; border-radius: var(--r-sm);
+  background: rgba(162,79,52,.18); color: #f0c9bb;
+}
+
+.voice-transcript {
+  margin-top: 1rem; padding-top: .9rem;
+  border-top: 1px solid rgba(236,231,220,.12);
+  display: flex; flex-direction: column; gap: .7rem;
+  max-height: 236px; overflow-y: auto;
+}
+.turn p { margin: .1rem 0 0; font-size: .93rem; line-height: 1.5; }
+.turn-who { letter-spacing: .12em; text-transform: uppercase; color: #8d887b; }
+.turn-seller p { color: #ece7dc; }
+.turn-assistant p { color: #b9b3a5; font-family: var(--serif); font-size: 1rem; }
+
+.voice-saved { margin-top: .8rem; color: #8d887b !important; }

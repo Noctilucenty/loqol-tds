@@ -1,0 +1,21 @@
+.design-hero { max-width: 760px; margin-bottom: 3rem; }
+.design-thesis {
+  font-size: clamp(1.9rem, 4vw, 2.9rem); line-height: 1.14;
+  margin: .6rem 0 1.3rem; letter-spacing: -.022em;
+}
+.design-counts { display: flex; gap: 2.4rem; margin-top: 2rem; padding-top: 1.6rem; border-top: 1px solid var(--line); }
+.design-counts div { display: flex; flex-direction: column; }
+.design-counts strong { font-family: var(--serif); font-size: 2rem; font-weight: 400; line-height: 1; }
+.design-counts span { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mute); margin-top: .3rem; }
+
+.design-block { padding: 1.9rem 0; border-top: 1px solid var(--line); max-width: 820px; }
+.design-block-head { display: flex; align-items: baseline; gap: .85rem; margin-bottom: .7rem; flex-wrap: wrap; }
+.design-block-head h2 { font-size: 1.42rem; }
+.design-rationale { color: var(--ink-soft); font-size: 1rem; line-height: 1.68; max-width: 68ch; }
+
+.design-examples { display: flex; flex-wrap: wrap; gap: .42rem; margin-top: 1.1rem; }
+.design-pill {
+  font-size: .82rem; padding: .34rem .7rem; border-radius: var(--r-sm);
+  background: var(--paper-sunk); color: var(--ink-mute); border: 1px solid var(--line-soft);
+}
+.design-pill.is-more { background: transparent; border-style: dashed; }

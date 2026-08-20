@@ -18,6 +18,7 @@ from ..models import (
     SessionStatus, utcnow,
 )
 from ..schemas import AnswerIn, form_spec
+from ..tds.questions import QUESTIONS_BY_ID
 from ..services import (
     answers_dict, next_question_id, progress, sync_flags, unanswered_required, write_answer,
 )
@@ -140,6 +141,45 @@ def put_answer(
         "supersededOtherLane": stale,
         **_state(db, ds),
     }
+
+
+@router.post("/{token}/answers/commit-group")
+def commit_group(
+    token: str,
+    body: dict,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Commit the implied "no" for every untapped tile when a grid is left.
+
+    The client must not decide which of those are already answered. It holds an
+    optimistic copy that can lag a round trip behind, and acting on it lets a
+    freshly tapped item get overwritten with the false it was about to skip. The
+    server owns the read-check-write, so the decision is made against committed
+    state under one transaction.
+    """
+    ds = _session(token, request, db)
+    ids = [qid for qid in (body.get("questionIds") or []) if qid in QUESTIONS_BY_ID]
+    if not ids:
+        return _state(db, ds)
+
+    already = {
+        row.question_id
+        for row in db.scalars(
+            select(Answer).where(
+                Answer.session_id == ds.id, Answer.question_id.in_(ids)
+            )
+        )
+    }
+    for qid in ids:
+        if qid not in already:
+            write_answer(
+                db, ds.id, qid, False,
+                status=AnswerStatus.ANSWERED,
+                source=AnswerSource.FORM,
+                advance_cursor=False,
+            )
+    return _state(db, ds)
 
 
 @router.post("/{token}/submit")
