@@ -42,6 +42,25 @@ and the start command is:
 uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
+## Changing the instance type via the API
+
+`PATCH /v1/services/{id}` needs the **complete** `serviceDetails` object, not just
+the field you are changing. A partial body returns a 500 that reads like an
+outage and is really a validation failure:
+
+```bash
+curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
+  https://api.render.com/v1/services/$SVC | \
+  python3 -c "import json,sys; d=json.load(sys.stdin)['serviceDetails']; \
+    d['plan']='starter'; \
+    [d.pop(k,None) for k in ('sshAddress','url','buildPlan','openPorts','previews','maintenanceMode','ipAllowList','cache')]; \
+    print(json.dumps({'serviceDetails': d}))" > patch.json
+
+curl -s -X PATCH -H "Authorization: Bearer $RENDER_API_KEY" \
+  -H "Content-Type: application/json" -d @patch.json \
+  https://api.render.com/v1/services/$SVC
+```
+
 ## Production checklist
 
 - `ENVIRONMENT=production` — turns on `Secure` cookies and enables the startup
