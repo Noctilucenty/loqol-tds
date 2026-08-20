@@ -34,6 +34,16 @@ SOURCE_PDF = DATA / "CA-TDS.pdf"
 INK = Color(0.05, 0.11, 0.24)  # near-black navy, reads as pen on a scan
 
 
+def us_date(value: date) -> str:
+    """MM/DD/YYYY.
+
+    The form is a California legal instrument and every printed date convention
+    on it is US-style. An ISO date reads as a machine artefact to the title
+    officer handling the file.
+    """
+    return value.strftime("%m/%d/%Y")
+
+
 def _fit_font_size(height: float, cap: float = 9.0) -> float:
     return max(min(cap, height - 2.0), 5.5)
 

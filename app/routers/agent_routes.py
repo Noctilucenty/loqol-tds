@@ -23,7 +23,7 @@ from ..services import (
 )
 from ..tds.values import ValueError_
 from ..tds.fieldmap import resolve
-from ..tds.fill import render
+from ..tds.fill import render, us_date
 from ..tds.questions import QUESTIONS_BY_ID
 from ..tds.roles import ROLE_LABELS
 from ..tds.rules import RULES
@@ -251,7 +251,7 @@ def preview_pdf(deal_id: str, db: Session = Depends(get_db), agent: Agent = Depe
         fields,
         system={
             "property_address": deal.property_address,
-            "disclosure_date": (ds.submitted_at or utcnow()).date().isoformat(),
+            "disclosure_date": us_date((ds.submitted_at or utcnow()).date()),
         },
         overflow=overflow,
     )
@@ -331,7 +331,7 @@ def send_for_signature(
 
     values = values_for_submission(fields, {
         "property_address": deal.property_address,
-        "disclosure_date": date.today().isoformat(),
+        "disclosure_date": us_date(date.today()),
     })
 
     try:

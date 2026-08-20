@@ -434,3 +434,10 @@ def test_a_frozen_disclosure_refuses_writes_that_would_change_nothing(client, db
 
     ds.status = SessionStatus.IN_PROGRESS
     db.commit()
+
+
+def test_dates_print_in_us_format():
+    """The form is a California legal instrument; ISO dates read as machine output."""
+    from datetime import date
+    from app.tds.fill import us_date
+    assert us_date(date(2026, 8, 20)) == "08/20/2026"
