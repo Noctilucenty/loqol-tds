@@ -34,6 +34,22 @@ interface SessionInfo { clientSecret: string; model: string; maxSeconds: number 
  * a model is driving it. The server re-checks the question exists, is currently
  * visible, and coerces the value into the shape the form can hold.
  */
+/** Does this conversation item carry actual words from the seller?
+ *
+ *  An audio item exists the moment the buffer commits, transcript or not, and
+ *  the buffer commits on room noise. Only the words are evidence that a
+ *  question was answered.
+ */
+function itemHasWords(item: any): boolean {
+  const parts = item?.content;
+  if (!Array.isArray(parts)) return false;
+  return parts.some(
+    (p: any) =>
+      (typeof p?.text === "string" && p.text.trim() !== "") ||
+      (typeof p?.transcript === "string" && p.transcript.trim() !== ""),
+  );
+}
+
 export function VoicePanel({
   token, onAnswerRecorded, onFinished, disabled, covered = 0, total = 0, scope = "voice",
 }: Props) {
@@ -139,13 +155,26 @@ export function VoicePanel({
     requestTurn();
   }, [requestTurn]);
 
+  /** Wait out transcription lag before deciding the seller said nothing. */
+  const waitForSellerTurn = useCallback(async (ms = 1800) => {
+    const deadline = Date.now() + ms;
+    while (!sellerSpoke.current && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 80));
+    }
+    return sellerSpoke.current;
+  }, []);
+
   const handleToolCall = useCallback(
     async (name: string, args: any, callId: string) => {
       if (name === "finish_section") {
         stop(true);
         return;
       }
-      if (!sellerSpoke.current) {
+      // Transcription is a separate model and runs behind the conversation, so
+      // a tool call can legitimately arrive before the words that justify it.
+      // Wait briefly rather than refusing, or a seller who answered gets told
+      // there was a hiccup and asked to say it all again.
+      if (!(await waitForSellerTurn())) {
         sendToolResult(callId, {
           ok: false,
           error:
@@ -198,7 +227,7 @@ export function VoicePanel({
         sendToolResult(callId, { ok: false, error: e?.message ?? "rejected" });
       }
     },
-    [token, onAnswerRecorded, stop, sendToolResult],
+    [token, onAnswerRecorded, stop, sendToolResult, waitForSellerTurn],
   );
 
   const onMessage = useCallback(
@@ -226,27 +255,25 @@ export function VoicePanel({
         case "response.audio_transcript.done":
           partial.current = "";
           break;
-        // Every signal that the seller has taken a turn, not just the
-        // transcript. Transcription is a separate model and it can lag behind
-        // the assistant's reply or fail outright; keying the write gate on it
-        // alone meant a seller answered, the assistant tried to record, and got
-        // refused - so it apologised for "a hiccup" and asked them to say it
-        // all again. Speech detection and the buffer commit both arrive first
-        // and neither depends on a transcript existing.
-        case "input_audio_buffer.speech_stopped":
-        case "input_audio_buffer.committed":
-          sellerSpoke.current = true;
-          break;
+        // What counts as the seller having taken a turn.
+        //
+        // Not speech detection: with a live microphone the server's VAD fires
+        // on room noise, which opened this gate with nobody having said
+        // anything - and the assistant duly recorded "yes, that is the right
+        // address" and thanked the seller for confirming it. Words are the
+        // evidence, so a transcript is what we wait for.
+        //
         // GA emits conversation.item.added / .done. There is no
-        // conversation.item.created, which is what this listened for, so the
-        // gate never opened and every single answer was refused.
+        // conversation.item.created, which is what this once listened for, so
+        // for a while the gate never opened at all and every answer was
+        // refused.
         case "conversation.item.added":
         case "conversation.item.done":
-          if (ev.item?.role === "user") sellerSpoke.current = true;
+          if (ev.item?.role === "user" && itemHasWords(ev.item)) sellerSpoke.current = true;
           break;
         case "conversation.item.input_audio_transcription.completed":
-          sellerSpoke.current = true;
           if (ev.transcript?.trim()) {
+            sellerSpoke.current = true;
             setTurns((t) => [...t, { who: "seller", text: ev.transcript.trim() }]);
           }
           break;

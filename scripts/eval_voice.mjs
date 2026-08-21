@@ -98,11 +98,13 @@ async function converse(token, replies, { maxTurns = 14 } = {}) {
       // set by hand - simulating this signal is what let a real blocking bug
       // through: the app trusted only the transcription event, which is a
       // separate model that can lag or fail.
-      if (ev.type === "input_audio_buffer.speech_stopped"
-        || ev.type === "input_audio_buffer.committed"
-        || ev.type === "conversation.item.input_audio_transcription.completed"
+      const hasWords = (item) => Array.isArray(item?.content) && item.content.some(
+        (p) => (typeof p?.text === "string" && p.text.trim())
+            || (typeof p?.transcript === "string" && p.transcript.trim()));
+      if ((ev.type === "conversation.item.input_audio_transcription.completed"
+             && ev.transcript?.trim())
         || ((ev.type === "conversation.item.added" || ev.type === "conversation.item.done")
-            && ev.item?.role === "user")) {
+            && ev.item?.role === "user" && hasWords(ev.item))) {
         sellerSpoke = true;
       }
       if (ev.type === "error") {
