@@ -569,3 +569,24 @@ def test_a_batched_answer_asks_for_only_one_turn():
     assert "conversation_already_has_active_response" in text, (
         "our own turn race is being shown to the seller as an error again"
     )
+
+
+def test_the_run_through_never_invites_the_model_to_read_ids_aloud():
+    """"A.range, A.oven, A.microwave" is gibberish to a homeowner.
+
+    Listing the run-through as "A.range: Range" and asking for the items to be
+    read "exactly as written" got exactly that, spoken out loud, on a live call.
+    The plain name has to come first and the id has to be visibly set apart.
+    """
+    from app.routers.voice_routes import build_instructions
+
+    class Deal:
+        property_address = "1 Test St"
+        seller_name = "Dana"
+
+    brief = build_instructions(Deal(), {}, "all")
+    line = next(l for l in brief.splitlines() if "A.range" in l)
+
+    assert line.strip().startswith("- Range"), f"the id leads the line: {line!r}"
+    assert "[id A.range]" in line, "the id is not visibly set apart from the name"
+    assert "must never be spoken" in brief

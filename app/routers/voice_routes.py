@@ -160,11 +160,12 @@ def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
             "ambiguity, and there are a lot of them. Read out a whole group in "
             "one go and let them answer it in one go.",
             "",
-            "Name the group, then list its items in one sentence, exactly as "
-            "they are written below and nothing else. Take whatever comes back "
-            "- often a partial list like \"the first two and the last one, none "
-            "of the rest\" - and record every item in the group from it, the "
-            "noes as well as the yeses.",
+            "Name the group, then read its items in one sentence, using the "
+            "plain names only. The id after each name is for record_answer and "
+            "must never be spoken - saying \"A.range\" out loud to a homeowner "
+            "is gibberish. Take whatever comes back, often a partial list like "
+            "\"the first two and the last one, none of the rest\", and record "
+            "every item in the group from it, the noes as well as the yeses.",
             "",
             "If some items in the group were left genuinely unaddressed, ask "
             "about just those, together, in one short follow-up. Never invent an "
@@ -177,7 +178,7 @@ def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
             by_group.setdefault(q.group or "Other", []).append(q)
         for group, items in by_group.items():
             lines.append(f"{group}:")
-            lines += [f"  - {q.id}: {q.prompt}" for q in items]
+            lines += [f"  - {q.prompt}   [id {q.id}]" for q in items]
         lines.append("")
 
     if considered:
