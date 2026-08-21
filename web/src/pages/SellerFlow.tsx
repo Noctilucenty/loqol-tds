@@ -37,11 +37,13 @@ export function SellerFlow() {
   //: Voice is available on the inventory grids too. It is not the fast way to
   //: answer fifty checkboxes, which is the whole routing argument - but a seller
   //: who cannot use the grid must still have a way through.
-  const [groupVoiceOpen, setGroupVoiceOpen] = useState(false);
   //: The seller asked to do the whole form by talking, so the assistant opens on
   //: every screen and its session covers every question rather than the 19 the
   //: router would have picked.
   const [spokenThrough, setSpokenThrough] = useState(false);
+  //: Opened by hand on a tap-lane question. Kept at this level so toggling it
+  //: does not depend on the question subtree that remounts.
+  const [voiceOpen, setVoiceOpen] = useState(false);
 
   const queue = useRef<Promise<unknown>>(Promise.resolve());
 
@@ -189,7 +191,31 @@ export function SellerFlow() {
   const index = found >= 0 ? found : Math.min(lastKnown.current, Math.max(steps.length - 1, 0));
   latest.current = { steps, answers };
 
+  // What the assistant has captured, phrased the way the seller would read it.
+  // Without this the spoken path is a black box: you talk, and nothing visible
+  // happens until the very end.
+  const captured = form.questions
+    .filter((q) => answers[q.id] !== undefined && isAnswered(answers, q.id))
+    .map((q) => {
+      const a = answers[q.id];
+      const raw = a.status === "unknown" ? "Not sure" : a.value;
+      let value: string;
+      if (typeof raw === "boolean") value = raw ? "Yes" : "No";
+      else if (Array.isArray(raw))
+        value = raw.map((id) => q.options.find((o) => o.id === id)?.label ?? id).join(", ") || "None";
+      else {
+        const s = String(raw ?? "");
+        value = q.options.find((o) => o.id === s)?.label
+          ?? (s === "yes" ? "Yes" : s === "no" ? "No" : s);
+      }
+      return { id: q.id, prompt: q.prompt, value: value.slice(0, 60) };
+    });
+
   const step = steps[Math.min(index, steps.length - 1)];
+
+  const stepIsVoiceLane =
+    step?.kind === "question" && (step.question.lane === "voice" || spokenThrough);
+  const showVoice = spokenThrough || stepIsVoiceLane || voiceOpen;
 
   // How far through the spoken questions the seller is, so the panel can show a
   // finish line rather than an open-ended conversation.
@@ -247,22 +273,78 @@ export function SellerFlow() {
       </header>
 
       <main className="wrap wrap-narrow seller-main">
-        {step?.kind === "group" && (
+        {/* Rendered once, here, and never inside the per-question subtree. That
+            subtree is keyed by question id, so it unmounts on every Continue -
+            which tore down the live WebRTC call, lost the transcript, and made
+            the next session restart the model from the top of its list. The
+            seller heard "does the property have a range?" on every screen. */}
+        {showVoice && (
+          <div className="seller-voice">
+            <VoicePanel
+              token={token}
+              onAnswerRecorded={refresh}
+              onFinished={refresh}
+              covered={voiceCovered}
+              total={voiceTotal}
+              scope={spokenThrough ? "all" : "voice"}
+            />
+          </div>
+        )}
+
+        {spokenThrough && (
+          <section className="rise stack" style={{ ["--gap" as any]: "1.25rem" }}>
+            <div>
+              <div className="eyebrow">Talking it through</div>
+              <h2>I'll ask, you answer.</h2>
+              <p className="muted small">
+                Go at your own pace. Say "repeat that" or "what does that mean" any time, and
+                "I'm not sure" is a real answer &mdash; better than a guess.
+              </p>
+            </div>
+
+            <div className="spoken-progress">
+              <div className="row-between">
+                <span className="tiny muted">
+                  {state.progress.answered} of {state.progress.total} answered
+                </span>
+                <span className="tiny muted">{state.progress.percent}%</span>
+              </div>
+              <div className="seller-meter" aria-hidden>
+                <span style={{ width: `${state.progress.percent}%` }} />
+              </div>
+            </div>
+
+            {captured.length > 0 && (
+              <div className="captured">
+                <div className="eyebrow">Captured so far</div>
+                {captured.slice(-8).reverse().map((c) => (
+                  <div key={c.id} className="captured-row">
+                    <span className="captured-q">{c.prompt}</span>
+                    <span className="captured-a">{c.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              className="btn btn-ghost"
+              onClick={() => setSpokenThrough(false)}
+              style={{ alignSelf: "flex-start" }}
+            >
+              Switch to tapping
+            </button>
+          </section>
+        )}
+
+        {!spokenThrough && step?.kind === "group" && (
           <section className="rise stack">
             <div className="eyebrow">{chapter?.title}</div>
             <h2>{step.group}</h2>
             <p className="muted small">
               Tap everything the property has. Leave the rest.
             </p>
-            {groupVoiceOpen || spokenThrough ? (
-              <VoicePanel
-                token={token}
-                onAnswerRecorded={refresh}
-                onFinished={refresh}
-                scope={spokenThrough ? "all" : "voice"}
-              />
-            ) : (
-              <button type="button" className="talk-instead" onClick={() => setGroupVoiceOpen(true)}>
+            {!showVoice && (
+              <button type="button" className="talk-instead" onClick={() => setVoiceOpen(true)}>
                 <span className="talk-instead-mark" aria-hidden>
                   <svg viewBox="0 0 24 24" width="13" height="13">
                     <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z" fill="currentColor" />
@@ -284,7 +366,7 @@ export function SellerFlow() {
           </section>
         )}
 
-        {step?.kind === "question" && (
+        {!spokenThrough && step?.kind === "question" && (
           <QuestionStep
             key={step.question.id}
             token={token}
@@ -292,6 +374,8 @@ export function SellerFlow() {
             answers={answers}
             knownAddress={state.property.address}
             spokenThrough={spokenThrough}
+            voiceOpen={voiceOpen}
+            onOpenVoice={() => setVoiceOpen(true)}
             onAnswer={answer}
             onVoiceAnswer={refresh}
             onVoiceFinished={onVoiceFinished}
@@ -301,7 +385,7 @@ export function SellerFlow() {
           />
         )}
 
-        {step?.kind === "review" && (
+        {!spokenThrough && step?.kind === "review" && (
           <Reconcile
             token={token}
             state={state}
@@ -319,7 +403,7 @@ export function SellerFlow() {
         )}
       </main>
 
-      {step?.kind !== "review" && (
+      {!spokenThrough && step?.kind !== "review" && (
         <footer className="seller-foot">
           <div className="wrap wrap-narrow row-between">
             <button
@@ -365,6 +449,8 @@ function QuestionStep({
   voiceTotal,
   knownAddress,
   spokenThrough,
+  voiceOpen,
+  onOpenVoice,
 }: {
   token: string;
   question: any;
@@ -377,31 +463,22 @@ function QuestionStep({
   chapterTitle: string;
   voiceCovered: number;
   voiceTotal: number;
+  voiceOpen: boolean;
+  onOpenVoice: () => void;
 }) {
   const voiceLane = question.lane === "voice" || spokenThrough;
   // Routing decides the *default*, never what is possible. On a tap question the
   // assistant is one line away rather than absent, so a seller who would rather
   // talk is never told they may not. That is the brief's "should never feel like
   // they're being made to use the wrong tool", taken literally.
-  const [voiceOpen, setVoiceOpen] = useState(false);
   return (
     <section className="rise stack" style={{ ["--gap" as any]: "1.15rem" }}>
       <div className="eyebrow">{chapterTitle}</div>
       <h2 className="q-prompt">{question.prompt}</h2>
 
-      {(voiceLane || voiceOpen) && (
-        <VoicePanel
-          token={token}
-          onAnswerRecorded={onVoiceAnswer}
-          onFinished={onVoiceFinished}
-          covered={voiceCovered}
-          total={voiceTotal}
-          scope={spokenThrough ? "all" : "voice"}
-        />
-      )}
 
       {!voiceLane && !voiceOpen && (
-        <button type="button" className="talk-instead" onClick={() => setVoiceOpen(true)}>
+        <button type="button" className="talk-instead" onClick={onOpenVoice}>
           <span className="talk-instead-mark" aria-hidden>
             <svg viewBox="0 0 24 24" width="13" height="13">
               <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z" fill="currentColor" />

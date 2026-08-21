@@ -105,3 +105,15 @@
 .gate-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.9rem; }
 .gate-actions .btn { margin-top: 0; }
 .gate-note { margin-top: .85rem; }
+
+.spoken-progress { display: flex; flex-direction: column; gap: .4rem; }
+
+.captured { border-top: 1px solid var(--line); padding-top: 1rem; }
+.captured .eyebrow { margin-bottom: .5rem; display: block; }
+.captured-row {
+  display: grid; grid-template-columns: minmax(0,1fr) auto;
+  gap: .9rem; align-items: baseline;
+  padding: .45rem 0; border-bottom: 1px solid var(--line-soft);
+}
+.captured-q { font-size: .875rem; color: var(--ink-mute); }
+.captured-a { font-family: var(--serif); font-size: .95rem; text-align: right; }
