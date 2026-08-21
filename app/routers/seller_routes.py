@@ -26,7 +26,7 @@ from ..services import (
 from ..tds.gating import is_visible
 from ..tds.questions import CHAPTERS_BY_ID, QUESTIONS_BY_ID
 from ..tds.values import ValueError_
-from ..tds.rules import RULES
+from ..tds.rules import RULES, flag_prompt
 
 router = APIRouter(prefix="/api/s", tags=["seller"])
 RULES_BY_ID = {r.id: r for r in RULES}
@@ -111,8 +111,9 @@ def _state(db: Session, ds: DisclosureSession) -> dict:
                 "severity": f.severity,
                 "questionIds": f.question_ids,
                 "message": f.message,
-                "prompt": RULES_BY_ID[f.rule_id].prompt if f.rule_id in RULES_BY_ID else
-                          "You answered this one twice. Which is right?",
+                "prompt": flag_prompt(
+                    f.rule_id, f.question_ids, "You answered this one twice. Which is right?"
+                ),
             }
             for f in flags
         ],

@@ -210,3 +210,29 @@ def evaluate(answers: dict[str, Any]) -> list[Rule]:
             # A rule must never be able to break the seller's session.
             continue
     return hits
+
+
+RULES_BY_ID = {r.id: r for r in RULES}
+
+
+def flag_prompt(rule_id: str, question_ids: list[str], fallback: str = "") -> str:
+    """What to put in front of a human so they can act on a flag.
+
+    Named rules carry their own wording. The `conflict:<question_id>` flags do
+    not - they are minted per question when the two lanes disagree, so they
+    never appear in RULES_BY_ID and used to fall through to an empty string on
+    the agent side. That put "Answered no in the form lane, then yes in the
+    voice lane" in the review panel with nothing saying which question it was
+    about, which is not something anyone can do anything with.
+    """
+    rule = RULES_BY_ID.get(rule_id)
+    if rule:
+        return rule.prompt
+
+    from .questions import QUESTIONS_BY_ID
+
+    for qid in question_ids:
+        question = QUESTIONS_BY_ID.get(qid)
+        if question:
+            return question.prompt
+    return fallback

@@ -26,7 +26,7 @@ from ..tds.fieldmap import resolve
 from ..tds.fill import render, us_date
 from ..tds.questions import QUESTIONS_BY_ID
 from ..tds.roles import ROLE_LABELS
-from ..tds.rules import RULES
+from ..tds.rules import RULES, flag_prompt
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
 RULES_BY_ID = {r.id: r for r in RULES}
@@ -181,7 +181,7 @@ def review(deal_id: str, db: Session = Depends(get_db), agent: Agent = Depends(c
             FlagOut(
                 id=f.id, rule_id=f.rule_id, severity=f.severity,
                 question_ids=f.question_ids, message=f.message,
-                prompt=RULES_BY_ID[f.rule_id].prompt if f.rule_id in RULES_BY_ID else "",
+                prompt=flag_prompt(f.rule_id, f.question_ids),
                 state=f.state.value,
             ).model_dump()
             for f in flags

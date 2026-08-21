@@ -592,3 +592,25 @@ def test_the_run_through_never_invites_the_model_to_read_ids_aloud():
     assert line.strip().startswith("- Range"), f"the id leads the line: {line!r}"
     assert "[id A.range]" in line, "the id is not visibly set apart from the name"
     assert "must never be spoken" in brief
+
+
+def test_a_lane_disagreement_flag_names_the_question_it_is_about():
+    """"Answered no in the form lane, then yes in the voice lane." About what?
+
+    The conflict flags are minted per question when the two lanes disagree, so
+    they are not in RULES_BY_ID and the agent review panel rendered them with an
+    empty prompt - a contradiction with no subject, sitting in the one panel the
+    agent is meant to act on before sending for signature.
+    """
+    from app.tds.rules import flag_prompt
+
+    named = flag_prompt("conflict:C.noise", ["C.noise"])
+    assert named, "a lane disagreement still has no prompt"
+    assert "noise" in named.lower(), named
+
+    # Named rules keep their own wording rather than the question's.
+    assert flag_prompt("sewer_and_septic", ["A.public_sewer"]).startswith("You told us")
+
+    # And an unrecognisable flag still degrades to whatever the caller wants.
+    assert flag_prompt("mystery", [], "fallback") == "fallback"
+    assert flag_prompt("mystery", ["not.a.question"], "fallback") == "fallback"
