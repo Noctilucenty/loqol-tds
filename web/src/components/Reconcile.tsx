@@ -18,16 +18,24 @@ import "./reconcile.css";
  * Hard conflicts block submission because they would produce a self-contradictory
  * legal document. Soft ones are shown, and the seller can confirm both are right.
  */
+/** Above this many gaps, list them and send the seller back instead of
+ *  rebuilding the entire form inside the review step. */
+const INLINE_LIMIT = 6;
+
 export function Reconcile({
   token,
   state,
   form,
   onChange,
+  onJumpTo,
 }: {
   token: string;
   state: SellerState;
   form: FormSpec;
   onChange: (s: SellerState) => void;
+  /** Take the seller back to a question. Without this the review step is a
+   *  dead end: submission is correctly blocked, and there is no way out. */
+  onJumpTo: (questionId: string) => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean } | null>(null);
@@ -138,23 +146,45 @@ export function Reconcile({
             {stillNeeded.length} question{stillNeeded.length === 1 ? "" : "s"} still{" "}
             {stillNeeded.length === 1 ? "needs" : "need"} an answer.
           </p>
-          {/* Answerable here rather than listed. Sending someone back through
-              twelve screens to find three gaps is the whole reason forms get
-              abandoned at the last step. */}
-          {stillNeeded.map((id) => {
-            const q = byId[id];
-            if (!q) return null;
-            return (
-              <div key={id} className="rec-fix">
-                <div className="tiny muted rec-fix-label">{q.prompt}</div>
-                <Answering
-                  question={q}
-                  answer={state.answers[id]}
-                  onAnswer={(v, st) => saveAnswer(id, v, st ?? "answered")}
-                />
-              </div>
-            );
-          })}
+          {/* A few gaps are answerable right here - sending someone back through
+              twelve screens to find three missing answers is the whole reason
+              forms get abandoned at the last step. A lot of gaps is a different
+              situation: rendering sixty controls in a column is not a review, it
+              is the form again, and worse. */}
+          {stillNeeded.length <= INLINE_LIMIT ? (
+            stillNeeded.map((id) => {
+              const q = byId[id];
+              if (!q) return null;
+              return (
+                <div key={id} className="rec-fix">
+                  <div className="tiny muted rec-fix-label">{q.prompt}</div>
+                  <Answering
+                    question={q}
+                    answer={state.answers[id]}
+                    onAnswer={(v, st) => saveAnswer(id, v, st ?? "answered")}
+                  />
+                </div>
+              );
+            })
+          ) : (
+            <>
+              <ul className="rec-missing">
+                {stillNeeded.slice(0, 5).map((id) => (
+                  <li key={id}>{byId[id]?.prompt ?? id}</li>
+                ))}
+                {stillNeeded.length > 5 && (
+                  <li className="muted">and {stillNeeded.length - 5} more</li>
+                )}
+              </ul>
+              <button
+                className="btn btn-brass"
+                style={{ marginTop: "1rem" }}
+                onClick={() => onJumpTo(stillNeeded[0])}
+              >
+                Go back and finish these
+              </button>
+            </>
+          )}
         </div>
       )}
 

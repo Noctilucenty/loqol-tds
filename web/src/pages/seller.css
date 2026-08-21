@@ -88,3 +88,16 @@
   border-left: 3px solid var(--brass);
   border-radius: 0 var(--r-md) var(--r-md) 0;
 }
+
+.talk-instead {
+  display: inline-flex; align-items: center; gap: .5rem;
+  background: none; border: none; padding: .15rem 0;
+  color: var(--brass-deep); font-size: .9rem; font-weight: 500;
+  border-bottom: 1px solid transparent; transition: border-color 140ms var(--ease);
+}
+.talk-instead:hover { border-bottom-color: var(--brass); }
+.talk-instead-mark {
+  width: 20px; height: 20px; border-radius: 999px; flex: none;
+  display: grid; place-items: center;
+  background: var(--brass-wash); color: var(--brass-deep);
+}

@@ -386,7 +386,20 @@ QUESTIONS += [
         options=[Option("attached", "Attached"), Option("detached", "Not attached")],
         bindings=[SingleCheck({"attached": "Attached", "detached": "NoAttachedGarage"})],
     ),
-    item("A.carport", "outside", "Parking", "Carport", "Carport"),
+    Question(
+        id="A.carport",
+        chapter="outside",
+        group="Parking",
+        # Phrased as a question because it renders as its own card, sitting
+        # between two other questions. A bare noun with Yes/No under it reads as
+        # a label, not something being asked.
+        prompt="Is there a carport?",
+        kind="bool",
+        lane=Lane.TAP,
+        why=Why.ENUMERATION,
+        legal="Carport",
+        bindings=[Check("Carport")],
+    ),
     Question(
         id="A.garage_opener",
         chapter="outside",

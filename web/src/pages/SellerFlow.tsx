@@ -34,6 +34,10 @@ export function SellerFlow() {
   //: it is read further down, past several early returns, and a hook after a
   //: conditional return changes the hook count between renders (React #310).
   const lastKnown = useRef(0);
+  //: Voice is available on the inventory grids too. It is not the fast way to
+  //: answer fifty checkboxes, which is the whole routing argument - but a seller
+  //: who cannot use the grid must still have a way through.
+  const [groupVoiceOpen, setGroupVoiceOpen] = useState(false);
 
   const queue = useRef<Promise<unknown>>(Promise.resolve());
 
@@ -237,6 +241,24 @@ export function SellerFlow() {
             <p className="muted small">
               Tap everything the property has. Leave the rest.
             </p>
+            {groupVoiceOpen ? (
+              <VoicePanel
+                token={token}
+                onAnswerRecorded={refresh}
+                onFinished={refresh}
+              />
+            ) : (
+              <button type="button" className="talk-instead" onClick={() => setGroupVoiceOpen(true)}>
+                <span className="talk-instead-mark" aria-hidden>
+                  <svg viewBox="0 0 24 24" width="13" height="13">
+                    <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z" fill="currentColor" />
+                    <path d="M5 11a7 7 0 0 0 14 0M12 18v3" fill="none" stroke="currentColor"
+                          strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </span>
+                Rather read these out?
+              </button>
+            )}
             <ToggleGrid
               questions={step.questions}
               answers={answers}
@@ -265,7 +287,20 @@ export function SellerFlow() {
         )}
 
         {step?.kind === "review" && (
-          <Reconcile token={token} state={state} form={form} onChange={setState} />
+          <Reconcile
+            token={token}
+            state={state}
+            form={form}
+            onChange={setState}
+            onJumpTo={(questionId) => {
+              const target = steps.find(
+                (s) =>
+                  (s.kind === "question" && s.question.id === questionId) ||
+                  (s.kind === "group" && s.questions.some((q) => q.id === questionId)),
+              );
+              if (target) setStepKey(target.key);
+            }}
+          />
         )}
       </main>
 
@@ -327,12 +362,17 @@ function QuestionStep({
   voiceTotal: number;
 }) {
   const voiceLane = question.lane === "voice";
+  // Routing decides the *default*, never what is possible. On a tap question the
+  // assistant is one line away rather than absent, so a seller who would rather
+  // talk is never told they may not. That is the brief's "should never feel like
+  // they're being made to use the wrong tool", taken literally.
+  const [voiceOpen, setVoiceOpen] = useState(false);
   return (
     <section className="rise stack" style={{ ["--gap" as any]: "1.15rem" }}>
       <div className="eyebrow">{chapterTitle}</div>
       <h2 className="q-prompt">{question.prompt}</h2>
 
-      {voiceLane && (
+      {(voiceLane || voiceOpen) && (
         <VoicePanel
           token={token}
           onAnswerRecorded={onVoiceAnswer}
@@ -340,6 +380,19 @@ function QuestionStep({
           covered={voiceCovered}
           total={voiceTotal}
         />
+      )}
+
+      {!voiceLane && !voiceOpen && (
+        <button type="button" className="talk-instead" onClick={() => setVoiceOpen(true)}>
+          <span className="talk-instead-mark" aria-hidden>
+            <svg viewBox="0 0 24 24" width="13" height="13">
+              <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z" fill="currentColor" />
+              <path d="M5 11a7 7 0 0 0 14 0M12 18v3" fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </span>
+          Rather talk this one through?
+        </button>
       )}
 
       {question.id === "P.address_ok" && (
@@ -351,7 +404,7 @@ function QuestionStep({
       <Explain question={question} />
 
       <div className="q-answer">
-        {voiceLane && (
+        {(voiceLane || voiceOpen) && (
           <div className="or-tap tiny muted">Or answer it here</div>
         )}
         <Answering
@@ -368,7 +421,7 @@ function QuestionStep({
               : answers[question.id]
           }
           onAnswer={(v, s) => onAnswer(question.id, v, s)}
-          autoFocus={!voiceLane}
+          autoFocus={!voiceLane && !voiceOpen}
         />
       </div>
     </section>

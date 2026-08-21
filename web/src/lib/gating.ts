@@ -102,7 +102,22 @@ export function buildSteps(questions: Question[], chapters: { id: string }[], an
     let i = 0;
     while (i < inChapter.length) {
       const q = inChapter[i];
-      const groupable = q.kind === "bool" && q.lane === "tap" && q.group !== "";
+      // A tile in a grid is an *item* the property either has or does not:
+      // "Range", "Sauna", "Rain Gutters". Three kinds of question look eligible
+      // and are not:
+      //   - a gate, whose answer opens or closes what comes next. Side by side
+      //     with the thing it gates, the dependency is invisible.
+      //   - anything with its own gate, which would appear before the question
+      //     that decides whether to ask it.
+      //   - anything phrased as a sentence, because a grid of full questions
+      //     reads as a checklist of things you are claiming, not answering.
+      const groupable =
+        q.kind === "bool" &&
+        q.lane === "tap" &&
+        q.group !== "" &&
+        !q.dependsOn &&
+        q.why !== "gate" &&
+        !q.prompt.trim().endsWith("?");
       if (!groupable) {
         steps.push({ kind: "question", chapterId: chapter.id, question: q, key: `q:${q.id}` });
         i += 1;
@@ -113,7 +128,10 @@ export function buildSteps(questions: Question[], chapters: { id: string }[], an
         i < inChapter.length &&
         inChapter[i].group === q.group &&
         inChapter[i].kind === "bool" &&
-        inChapter[i].lane === "tap"
+        inChapter[i].lane === "tap" &&
+        !inChapter[i].dependsOn &&
+        inChapter[i].why !== "gate" &&
+        !inChapter[i].prompt.trim().endsWith("?")
       ) {
         batch.push(inChapter[i]);
         i += 1;
