@@ -585,7 +585,9 @@ def test_the_run_through_never_invites_the_model_to_read_ids_aloud():
         seller_name = "Dana"
 
     brief = build_instructions(Deal(), {}, "all")
-    line = next(l for l in brief.splitlines() if "A.range" in l)
+    # The prose also names A.range, as the example of what not to say, so match
+    # the list entry rather than the first mention.
+    line = next(l for l in brief.splitlines() if l.strip().startswith("- ") and "A.range" in l)
 
     assert line.strip().startswith("- Range"), f"the id leads the line: {line!r}"
     assert "[id A.range]" in line, "the id is not visibly set apart from the name"
