@@ -261,6 +261,27 @@ const SCENARIOS = [
     },
   },
   {
+    name: "it asks one group at a time, not four in a breath",
+    replies: [
+      "Yes right address, I live there.",
+      "Range and oven yes, nothing else.",
+    ],
+    assert(r) {
+      // Group headings are distinctive enough to count by their lead items.
+      const MARKERS = {
+        kitchen: /\brange\b/i, heating: /central heating/i,
+        safety: /burglar alarm|smoke detector/i, media: /tv antenna|satellite dish/i,
+        yard: /rain gutter|sprinkler/i, sewer: /public sewer|septic/i,
+      };
+      const worst = r.said
+        .filter((t) => !t.startsWith("SELLER:"))
+        .map((t) => Object.values(MARKERS).filter((re) => re.test(t)).length)
+        .reduce((a, b) => Math.max(a, b), 0);
+      check("no turn reads out more than one group", worst <= 1,
+        `${worst} groups in one turn`);
+    },
+  },
+  {
     name: "a correction mid-sentence wins",
     replies: [
       "Yes right address, I live there.",
