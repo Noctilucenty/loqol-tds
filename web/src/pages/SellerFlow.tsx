@@ -5,7 +5,7 @@ import { Answering, ToggleGrid } from "../components/Answering";
 import { VoicePanel } from "../components/VoicePanel";
 import { Explain } from "../components/Explain";
 import { Reconcile } from "../components/Reconcile";
-import { buildSteps, isAnswered, isVisible, stepIsComplete, type Step } from "../lib/gating";
+import { buildSteps, firstUnfinished, isAnswered, isVisible, stepIsComplete, type Step } from "../lib/gating";
 import type { AnswerRecord, SellerBootstrap, SellerState } from "../types";
 
 type AnswerMapT = Record<string, AnswerRecord>;
@@ -325,7 +325,11 @@ export function SellerFlow() {
 
             <button
               className="btn btn-ghost"
-              onClick={() => setSpokenThrough(false)}
+              onClick={() => {
+                // Put them where the conversation got to, not back at the top.
+                setStepKey(firstUnfinished(steps, answers)?.key ?? steps[0]?.key ?? null);
+                setSpokenThrough(false);
+              }}
               style={{ alignSelf: "flex-start" }}
             >
               Switch to tapping

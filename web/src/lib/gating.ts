@@ -162,3 +162,30 @@ export function stepIsComplete(step: Step, answers: AnswerMap): boolean {
   // fastest part of the interview into its most tedious.
   return true;
 }
+
+
+/** The first step the seller still has something to do on.
+ *
+ *  Switching out of the spoken run-through used to drop them on step one - the
+ *  address they had just confirmed out loud - and make them tap Continue past
+ *  every question they had already answered. The answers survived the switch;
+ *  their place in the form did not.
+ *
+ *  This deliberately does not reuse stepIsComplete. That call answers "may the
+ *  seller submit", where an untouched inventory group is complete because an
+ *  unchecked box on the paper form means the property does not have the item.
+ *  Navigation is a different question - "is there anything here still to do" -
+ *  and answering it with stepIsComplete would throw a seller who is 14% done
+ *  past forty untouched items to the end of the form.
+ */
+export function firstUnfinished(steps: Step[], answers: AnswerMap): Step | undefined {
+  return (
+    steps.find((s) =>
+      s.kind === "question"
+        ? !isAnswered(answers, s.question.id)
+        : s.kind === "group"
+          ? !s.questions.every((q) => isAnswered(answers, q.id))
+          : false,
+    ) ?? steps[steps.length - 1]
+  );
+}
