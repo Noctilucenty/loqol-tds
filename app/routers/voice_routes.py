@@ -160,15 +160,16 @@ def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
             "ambiguity, and there are a lot of them. Read out a whole group in "
             "one go and let them answer it in one go.",
             "",
-            "Say it like: \"In the kitchen and laundry - do you have a range, an "
-            "oven, a microwave, a dishwasher, a trash compactor, a garbage "
-            "disposal, washer dryer hookups?\" Then take whatever they say - "
-            "\"range, oven and dishwasher, none of the rest\" - and record every "
-            "item in the group from it, including the ones they said no to.",
+            "Name the group, then list its items in one sentence, exactly as "
+            "they are written below and nothing else. Take whatever comes back "
+            "- often a partial list like \"the first two and the last one, none "
+            "of the rest\" - and record every item in the group from it, the "
+            "noes as well as the yeses.",
             "",
-            "Anything in the group they did not mention either way, ask once as a "
-            "short follow-up, all together: \"and the microwave and the gazebo?\" "
-            "Do not go item by item, and do not explain these unless asked.",
+            "If some items in the group were left genuinely unaddressed, ask "
+            "about just those, together, in one short follow-up. Never invent an "
+            "item that is not on the list, never re-ask one they already "
+            "answered, and do not explain these unless asked.",
             "",
         ]
         by_group: dict[str, list] = {}

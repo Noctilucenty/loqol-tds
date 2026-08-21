@@ -540,3 +540,32 @@ def test_what_the_live_model_recorded_all_survives_the_write_path():
     assert fields["SellerIsOccupying"] is True
     assert fields["SellerNotOccupying"] is False
     assert fields["Gas2"] is True and fields["City"] is True
+
+
+def test_a_batched_answer_asks_for_only_one_turn():
+    """Seven tool calls in one breath must not become seven response.create.
+
+    The realtime API allows a single active response. Once the run-through
+    started asking a whole room at a time, "range, oven and dishwasher, none of
+    the rest" began producing seven record_answer calls in one turn. Asking for
+    a turn after each one got six rejections back, and the error handler put
+    them in front of the seller as a banner.
+    """
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parents[1] / "web" / "src" / "components" / "VoicePanel.tsx"
+    text = src.read_text()
+
+    body = text[text.index("const sendToolResult"):]
+    body = body[: body.index("const handleToolCall")]
+    assert "response.create" not in body, (
+        "sendToolResult asks for a turn directly again - it must go through "
+        "requestTurn, which waits for the running response to finish"
+    )
+    assert "requestTurn()" in body
+
+    # And the gate itself has to still be there.
+    assert "responseActive" in text and "wantTurn" in text
+    assert "conversation_already_has_active_response" in text, (
+        "our own turn race is being shown to the seller as an error again"
+    )

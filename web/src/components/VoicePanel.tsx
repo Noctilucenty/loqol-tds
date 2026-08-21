@@ -58,6 +58,12 @@ export function VoicePanel({
   // render, the cleanup effect re-ran, and the live WebRTC call was torn down
   // after the seller's very first answer.
   const onFinishedRef = useRef(onFinished);
+  // The realtime API allows one response at a time. A grouped answer produces
+  // several record_answer calls in a single turn, so asking for a response
+  // after each one asks six times too often.
+  const wholeForm = scope === "all";
+  const responseActive = useRef(false);
+  const wantTurn = useRef(false);
   onFinishedRef.current = onFinished;
 
   const stop = useCallback(
@@ -74,6 +80,8 @@ export function VoicePanel({
       pc.current = null;
       dc.current = null;
       stream.current = null;
+      responseActive.current = false;
+      wantTurn.current = false;
       setLevel(0);
       setSecondsLeft(null);
       setPhase("idle");
@@ -84,12 +92,29 @@ export function VoicePanel({
 
   useEffect(() => () => stop(), [stop]);
 
-  /** Return a tool result, then explicitly ask for the next turn.
+  /** Ask for the next turn, but only ever one at a time.
    *
    *  The realtime API does not generate a response off the back of a
-   *  function_call_output. Without the follow-up `response.create`, the
-   *  assistant records the seller's first answer and then never speaks again -
-   *  it looks like a hang, and it takes the entire voice lane down with it. */
+   *  function_call_output. Without a follow-up `response.create`, the assistant
+   *  records the seller's first answer and then never speaks again - it looks
+   *  like a hang, and it takes the entire voice lane down with it.
+   *
+   *  But it also refuses a second `response.create` while one is running. Now
+   *  that a single "range, oven and dishwasher, none of the rest" produces
+   *  seven tool calls, asking after each one meant six rejections and an error
+   *  banner in the seller's face. So: ask now if nothing is running, otherwise
+   *  remember that we owe a turn and ask when the current one finishes. */
+  const requestTurn = useCallback(() => {
+    const channel = dc.current;
+    if (!channel || channel.readyState !== "open") return;
+    if (responseActive.current) {
+      wantTurn.current = true;
+      return;
+    }
+    responseActive.current = true;
+    channel.send(JSON.stringify({ type: "response.create" }));
+  }, []);
+
   const sendToolResult = useCallback((callId: string, output: unknown) => {
     const channel = dc.current;
     if (!channel || channel.readyState !== "open") return;
@@ -99,8 +124,8 @@ export function VoicePanel({
         item: { type: "function_call_output", call_id: callId, output: JSON.stringify(output) },
       }),
     );
-    channel.send(JSON.stringify({ type: "response.create" }));
-  }, []);
+    requestTurn();
+  }, [requestTurn]);
 
   const handleToolCall = useCallback(
     async (name: string, args: any, callId: string) => {
@@ -158,12 +183,29 @@ export function VoicePanel({
             /* malformed arguments: the model will be told and can retry */
           }
           break;
+        case "response.created":
+          responseActive.current = true;
+          break;
+        case "response.done":
+          responseActive.current = false;
+          if (wantTurn.current) {
+            wantTurn.current = false;
+            requestTurn();
+          }
+          break;
         case "error":
+          // A turn we asked for while one was already running is our own race,
+          // not something the seller did. Recover instead of alarming them.
+          if (ev.error?.code === "conversation_already_has_active_response") {
+            responseActive.current = true;
+            wantTurn.current = true;
+            break;
+          }
           setError(ev.error?.message ?? "The assistant hit an error.");
           break;
       }
     },
-    [handleToolCall],
+    [handleToolCall, requestTurn],
   );
 
   const start = useCallback(async () => {
@@ -192,6 +234,7 @@ export function VoicePanel({
         setPhase("live");
         // The assistant opens. With low-eagerness turn detection nobody speaks
         // first unless we ask, so both sides would sit waiting.
+        responseActive.current = true;
         channel.send(JSON.stringify({ type: "response.create" }));
       };
 
@@ -282,12 +325,15 @@ export function VoicePanel({
           <div className="voice-title">
             {phase === "connecting" && "Connecting…"}
             {live && "Listening"}
-            {(phase === "idle" || phase === "error") && "Talk it through instead"}
+            {(phase === "idle" || phase === "error") &&
+              (wholeForm ? "Ready when you are" : "Talk it through instead")}
           </div>
           <div className="voice-sub small muted">
             {live
               ? "Say it however it comes out. I'll ask if I need more."
-              : "These are the questions people get stuck on. Speaking is faster than typing, and you can stop any time."}
+              : wholeForm
+                ? "I'll take you through the whole form, a room at a time. Stop or switch to tapping whenever you like."
+                : "These are the questions people get stuck on. Speaking is faster than typing, and you can stop any time."}
           </div>
         </div>
 

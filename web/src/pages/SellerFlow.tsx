@@ -278,6 +278,17 @@ export function SellerFlow() {
             which tore down the live WebRTC call, lost the transcript, and made
             the next session restart the model from the top of its list. The
             seller heard "does the property have a range?" on every screen. */}
+        {spokenThrough && (
+          <div className="rise">
+            <div className="eyebrow">Talking it through</div>
+            <h2>I'll ask, you answer.</h2>
+            <p className="muted small">
+              Go at your own pace. Say "repeat that" or "what does that mean" any time, and
+              "I'm not sure" is a real answer &mdash; better than a guess.
+            </p>
+          </div>
+        )}
+
         {showVoice && (
           <div className="seller-voice">
             <VoicePanel
@@ -293,25 +304,11 @@ export function SellerFlow() {
 
         {spokenThrough && (
           <section className="rise stack" style={{ ["--gap" as any]: "1.25rem" }}>
-            <div>
-              <div className="eyebrow">Talking it through</div>
-              <h2>I'll ask, you answer.</h2>
-              <p className="muted small">
-                Go at your own pace. Say "repeat that" or "what does that mean" any time, and
-                "I'm not sure" is a real answer &mdash; better than a guess.
-              </p>
-            </div>
-
-            <div className="spoken-progress">
-              <div className="row-between">
-                <span className="tiny muted">
-                  {state.progress.answered} of {state.progress.total} answered
-                </span>
-                <span className="tiny muted">{state.progress.percent}%</span>
-              </div>
-              <div className="seller-meter" aria-hidden>
-                <span style={{ width: `${state.progress.percent}%` }} />
-              </div>
+            {/* The sticky header already carries a meter, a percentage and a
+                time estimate. A second meter directly under it was the same
+                fact three times over; the count is the one thing it lacked. */}
+            <div className="tiny muted">
+              {state.progress.answered} of {state.progress.total} answered
             </div>
 
             {captured.length > 0 && (
