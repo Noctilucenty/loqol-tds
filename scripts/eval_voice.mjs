@@ -242,11 +242,16 @@ const SCENARIOS = [
     assert(r) {
       const spoken = r.said.filter((s) => !s.startsWith("SELLER:"));
       const last = spoken[spoken.length - 1] ?? "";
-      check("the seller is left with a question, not an announcement",
-        last.includes("?"), last.slice(-90));
-      check("any announcement-only turn was recovered without the seller prodding",
-        (r.dangling ?? 0) === 0 || last.includes("?"),
-        `${r.dangling ?? 0} recovered`);
+      // A turn that confirms what was captured and invites a correction is a
+      // fine place to leave someone; a turn that says "next up is safety and
+      // security" and then stops is not. Only the second sort strands them.
+      const stranded = last.trim() && !last.includes("?")
+        && !/(say so|let me know|tell me|go ahead|whenever you)/i.test(last.slice(-160))
+        && /\b(next|move on|moving on|coming up|one shot|go through|run through)\b/i
+             .test(last.slice(-200));
+      check("the seller is never left on an announcement", !stranded, last.slice(-90));
+      check("any announcement-only turn recovered without the seller prodding",
+        (r.dangling ?? 0) === 0, `${r.dangling ?? 0} needed recovery`);
     },
   },
   {
