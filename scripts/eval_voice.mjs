@@ -93,6 +93,18 @@ async function converse(token, replies, { maxTurns = 14 } = {}) {
       try { ev = JSON.parse(raw.data); } catch { return; }
 
       if (ev.type === "response.created") active = true;
+
+      // Mirror the browser's gate, derived from the same events rather than
+      // set by hand - simulating this signal is what let a real blocking bug
+      // through: the app trusted only the transcription event, which is a
+      // separate model that can lag or fail.
+      if (ev.type === "input_audio_buffer.speech_stopped"
+        || ev.type === "input_audio_buffer.committed"
+        || ev.type === "conversation.item.input_audio_transcription.completed"
+        || ((ev.type === "conversation.item.added" || ev.type === "conversation.item.done")
+            && ev.item?.role === "user")) {
+        sellerSpoke = true;
+      }
       if (ev.type === "error") {
         if (ev.error?.code === "conversation_already_has_active_response") { owed = true; return; }
         log.errors.push(ev.error?.code || JSON.stringify(ev.error).slice(0, 120));
@@ -137,7 +149,9 @@ async function converse(token, replies, { maxTurns = 14 } = {}) {
 
       if (ev.type === "response.done") {
         active = false;
-        sellerSpoke = false;
+        // Mirror the browser: only a turn where the assistant actually spoke
+        // spends the seller's turn.
+        if (turnText.trim()) sellerSpoke = false;
         if (said.trim()) log.said.push(said.trim());
         said = "";
 
@@ -157,7 +171,6 @@ async function converse(token, replies, { maxTurns = 14 } = {}) {
         if (++turns > maxTurns) { clearTimeout(timer); return done("max turns"); }
         if (turn < replies.length) {
           const r = replies[turn++];
-          sellerSpoke = true;
           log.said.push("SELLER: " + r);
           send({ type: "conversation.item.create", item: {
             type: "message", role: "user", content: [{ type: "input_text", text: r }] } });
@@ -234,6 +247,26 @@ const SCENARIOS = [
       check("any announcement-only turn was recovered without the seller prodding",
         (r.dangling ?? 0) === 0 || last.includes("?"),
         `${r.dangling ?? 0} recovered`);
+    },
+  },
+  {
+    name: "an answered question actually reaches the database",
+    replies: [
+      "Yes that address is right, and I live there.",
+      "Range and oven yes, nothing else.",
+    ],
+    assert(r) {
+      // The write gate refused every call in a live browser session because it
+      // keyed on an event that had not arrived. Everything looked healthy on
+      // the wire and nothing was saved.
+      const n = Object.keys(r.answers).length;
+      check("the seller's answers are persisted, not silently refused", n >= 3,
+        `${n} answers stored`);
+      check("no call was blocked by the write gate after the seller spoke",
+        r.calls.filter((c) => c.blocked).length <= 1,
+        `${r.calls.filter((c) => c.blocked).length} blocked`);
+      const hiccup = r.said.some((t) => /hiccup|didn.t record|try that again|say it again/i.test(t));
+      check("the assistant never apologises for failing to record", !hiccup);
     },
   },
   {

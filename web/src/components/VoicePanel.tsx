@@ -226,9 +226,27 @@ export function VoicePanel({
         case "response.audio_transcript.done":
           partial.current = "";
           break;
+        // Every signal that the seller has taken a turn, not just the
+        // transcript. Transcription is a separate model and it can lag behind
+        // the assistant's reply or fail outright; keying the write gate on it
+        // alone meant a seller answered, the assistant tried to record, and got
+        // refused - so it apologised for "a hiccup" and asked them to say it
+        // all again. Speech detection and the buffer commit both arrive first
+        // and neither depends on a transcript existing.
+        case "input_audio_buffer.speech_stopped":
+        case "input_audio_buffer.committed":
+          sellerSpoke.current = true;
+          break;
+        // GA emits conversation.item.added / .done. There is no
+        // conversation.item.created, which is what this listened for, so the
+        // gate never opened and every single answer was refused.
+        case "conversation.item.added":
+        case "conversation.item.done":
+          if (ev.item?.role === "user") sellerSpoke.current = true;
+          break;
         case "conversation.item.input_audio_transcription.completed":
+          sellerSpoke.current = true;
           if (ev.transcript?.trim()) {
-            sellerSpoke.current = true;
             setTurns((t) => [...t, { who: "seller", text: ev.transcript.trim() }]);
           }
           break;
@@ -245,11 +263,15 @@ export function VoicePanel({
           break;
         case "response.done": {
           responseActive.current = false;
-          // One utterance may legitimately answer several things, so the gate
-          // clears per turn rather than per recorded answer.
-          sellerSpoke.current = false;
 
           const spoken = turnText.current;
+          // The seller's turn is spent when the assistant answers them, not
+          // when a response happens to end. One utterance can produce several
+          // responses - we ask for a turn after each tool result, and the model
+          // often splits its writes across them - and clearing the gate on
+          // every response.done refused the second half of an answer the seller
+          // had genuinely given.
+          if (spoken.trim()) sellerSpoke.current = false;
           const usedTool = calledTool.current;
           turnText.current = "";
           calledTool.current = false;

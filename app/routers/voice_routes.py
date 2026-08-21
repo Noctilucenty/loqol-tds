@@ -18,6 +18,8 @@ a value the form cannot represent, would be a defect in this file.
 
 from __future__ import annotations
 
+import re
+
 from datetime import timedelta
 
 import httpx
@@ -463,6 +465,14 @@ def voice_answer(token: str, body: dict, request: Request, db: Session = Depends
     }
 
 
+_HEDGE = re.compile(
+    r"\b(?:not\s+sure|unsure|no\s+idea|don'?t\s+know|do\s+not\s+know|dunno|"
+    r"can'?t\s+remember|cannot\s+remember|maybe|possibly|i\s+think|unknown|"
+    r"not\s+certain|no\s+clue)\b",
+    re.IGNORECASE,
+)
+
+
 def _next_ask(answers: dict, scope: str) -> dict | None:
     """What the assistant should say next, handed back with every tool result.
 
@@ -571,12 +581,34 @@ def voice_answers(token: str, body: dict, request: Request, db: Session = Depend
     recorded: list[dict] = []
     refused: list[dict] = []
 
+    # An "unknown" that lands on top of a definite answer, with nothing in what
+    # the seller said suggesting doubt, is the model slipping rather than the
+    # seller changing their mind. Refuse just that item.
+    #
+    # This deliberately does not reuse values._looks_unsure. That one matches a
+    # whole answer from its start, on purpose - it has to, or the street address
+    # "Maybell Ave" reads as "maybe". Here we are scanning a whole spoken
+    # sentence for a hedge anywhere in it, which is the opposite question.
+    sounds_unsure = bool(transcript) and _HEDGE.search(str(transcript)) is not None
+
     for item in items:
         if not isinstance(item, dict):
             refused.append({"questionId": None, "error": "not an object"})
             continue
         qid = item.get("id") or item.get("question_id")
         answers = answers_dict(db, ds.id)
+
+        if (
+            str(item.get("value", "")).lower() == "unknown"
+            and not sounds_unsure
+            and answers.get(qid) is not None
+        ):
+            refused.append({
+                "questionId": qid,
+                "error": "already answered and nothing in what they said "
+                         "suggests doubt - leave it as it is",
+            })
+            continue
         try:
             value, coerced_status, _row = _apply_one(
                 db, ds, qid, item.get("value"),

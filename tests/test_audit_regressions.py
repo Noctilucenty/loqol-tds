@@ -677,3 +677,40 @@ def test_the_brief_forbids_answering_for_a_silent_seller():
     brief = build_instructions(Deal(), {}, "all")
     assert "Silence is not an" in brief
     assert "Do not fill anything in for them" in brief
+
+
+def test_an_unexplained_unknown_cannot_overwrite_a_stated_answer(client, seller_link):
+    """A model slip must not turn a "yes" into "I don't know" on a disclosure."""
+    token = seller_link["token"]
+    client.post(f"/api/voice/{token}/answers", json={
+        "items": [{"id": "A.range", "value": "yes"}, {"id": "A.oven", "value": "yes"}],
+        "transcript": "Range and oven yes.",
+    })
+
+    # Nothing in this sentence suggests doubt, so the downgrade is refused.
+    r = client.post(f"/api/voice/{token}/answers", json={
+        "items": [{"id": "A.range", "value": "unknown"}],
+        "transcript": "Range and oven yes.",
+    })
+    assert r.status_code == 200
+    assert r.json()["refused"], r.json()
+    state = client.get(f"/api/s/{token}/state").json()
+    assert state["answers"]["A.range"]["value"] is True
+
+    # But a seller who actually says so is allowed to change their mind.
+    r = client.post(f"/api/voice/{token}/answers", json={
+        "items": [{"id": "A.oven", "value": "unknown"}],
+        "transcript": "Actually I'm not sure about the oven, it might be the landlord's.",
+    })
+    assert r.json()["refused"] == [], r.json()
+    state = client.get(f"/api/s/{token}/state").json()
+    assert state["answers"]["A.oven"]["status"] == "unknown"
+
+
+def test_the_hedge_matcher_does_not_repeat_the_maybell_avenue_bug():
+    from app.routers.voice_routes import _HEDGE
+
+    assert not _HEDGE.search("Maybell Ave, Palo Alto")
+    assert not _HEDGE.search("Range, oven and dishwasher yes.")
+    assert _HEDGE.search("no idea honestly")
+    assert _HEDGE.search("I don't know about the disposal")
