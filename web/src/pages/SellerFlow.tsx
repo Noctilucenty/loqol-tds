@@ -177,7 +177,16 @@ export function SellerFlow() {
     );
   }
   if (!started && state.progress.answered > 0) {
-    return <Resume state={state} onStart={() => setStarted(true)} />;
+    return (
+      <Resume
+        state={state}
+        onStart={() => setStarted(true)}
+        onStartTalking={() => {
+          setSpokenThrough(true);
+          setStarted(true);
+        }}
+      />
+    );
   }
 
   // Resolved by key, so a step list that grew or shrank under us does not move
@@ -570,7 +579,13 @@ function Welcome({
   );
 }
 
-function Resume({ state, onStart }: { state: SellerState; onStart: () => void }) {
+function Resume({
+  state, onStart, onStartTalking,
+}: {
+  state: SellerState;
+  onStart: () => void;
+  onStartTalking: () => void;
+}) {
   return (
     <div className="wrap wrap-narrow gate rise">
       <div className="eyebrow">Welcome back</div>
@@ -592,9 +607,20 @@ function Resume({ state, onStart }: { state: SellerState; onStart: () => void })
           </div>
         ))}
       </div>
-      <button className="btn btn-primary btn-lg" onClick={onStart}>
-        Pick up where I left off
-      </button>
+      {/* Coming back must not cost the seller a lane. This screen only offered
+          tapping, so anyone who did half the form out loud and closed the tab
+          could never get back into the conversation. */}
+      <div className="gate-actions">
+        <button className="btn btn-primary btn-lg" onClick={onStart}>
+          Pick up where I left off
+        </button>
+        <button className="btn btn-ghost btn-lg" onClick={onStartTalking}>
+          Carry on out loud
+        </button>
+      </div>
+      <p className="tiny muted gate-note">
+        It picks up from what you have already answered, either way.
+      </p>
     </div>
   );
 }
