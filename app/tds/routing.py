@@ -35,42 +35,46 @@ class Why(StrEnum):
 
 RATIONALE: dict[Why, str] = {
     Why.ENUMERATION: (
-        "Closed-set enumeration. Many items, near-zero ambiguity, and the seller is "
-        "walking their own house in their head. A tappable grid is both faster and more "
-        "accurate than speaking fifty yes/nos, and it lets them scan for what they "
-        "forgot. Voice here is actively worse: it serialises a task the eye does in "
-        "parallel."
+        "Fifty checkboxes. Range, oven, gazebo, sauna. None of them is hard to "
+        "understand - the work is just remembering what your own house has, and "
+        "there are a lot of them. Reading fifty items out loud takes longer than "
+        "tapping them, you lose track of where you are, and you cannot glance "
+        "back to see the one you skipped. So: a grid."
     ),
     Why.PRECISION: (
-        "An exact string, number or date. Speech-to-text on addresses, unit numbers and "
-        "proper nouns is the highest-error path in any voice UI, and an address typo "
-        "propagates onto all three pages of a legal instrument. Tap, always."
+        "An address, a room name, a count. Speech-to-text is at its worst on "
+        "exactly this sort of thing, and an address typo ends up printed on all "
+        "three pages of a legal document. Not worth the risk to save a few "
+        "seconds."
     ),
     Why.GATE: (
-        "A single binary whose answer visibly opens or closes a whole section. One tap "
-        "beats a turn of dialogue, and the seller gets to see the consequence of the "
-        "answer immediately."
+        "One yes or no that opens or closes everything after it. Say no to the "
+        "pool and three questions disappear. That is easier to follow when you "
+        "can see it happen than when someone describes it to you."
     ),
     Why.COMPREHENSION: (
-        "The seller usually does not know what is being asked. 'Encroachments, easements "
-        "or similar matters' is not a question a homeowner can answer as written. The "
-        "bottleneck is comprehension, not input, and the fix for comprehension is a "
-        "conversation that can rephrase, give an example, and check it landed."
+        "\"Any encroachments, easements or similar matters that may affect your "
+        "interest in the subject property.\" Nobody who owns a house can answer "
+        "that as written. The problem is not typing, it is that the question "
+        "makes no sense until someone rephrases it and gives you an example - "
+        "which is a conversation, not a form field."
     ),
     Why.NARRATIVE: (
-        "A bare yes is unusable here; the form demands the story, with dates, scope and "
-        "whether it was repaired. Typing a legal narrative at 10pm on a phone is exactly "
-        "where sellers abandon. Speaking is roughly three times faster than thumb-typing "
-        "and lets the agent ask the follow-up while the memory is still open."
+        "Yes on its own is useless here. The form wants what happened, roughly "
+        "when, and whether anyone fixed it. That is a paragraph, and asking "
+        "someone to thumb-type a paragraph about their roof at ten at night is "
+        "how you get an empty box. Talking is easier, and the assistant can ask "
+        "the follow-up while they are still thinking about it."
     ),
     Why.COMPOUND: (
-        "One question that resolves to several sub-answers, usually needing a follow-up "
-        "before the answer is usable at all. Handled as a single purpose-built control "
-        "rather than as loose checkboxes, so it cannot be half-answered."
+        "One question wearing three checkboxes. \"Water Heater: Gas / Solar / "
+        "Electric\" is not three questions, and a solar system with a gas "
+        "backup needs two of them ticked. Given its own control so it cannot end "
+        "up half-answered."
     ),
     Why.AGENT_OWNED: (
-        "Not the seller's knowledge. Asking a homeowner which inspection reports will be "
-        "attached to the transfer is asking them to do their agent's job. Routed out of "
-        "the seller flow entirely."
+        "Not something a homeowner knows. Asking which inspection reports will "
+        "be attached to the transfer is asking them to do their agent's job, so "
+        "these never appear in the seller's flow at all."
     ),
 }

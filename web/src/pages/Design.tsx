@@ -56,14 +56,18 @@ export function Design() {
         <div className="design-hero">
           <div className="eyebrow">Design notes</div>
           <h1 className="design-thesis">
-            Speak when the bottleneck is understanding.<br />
-            Tap when the bottleneck is enumeration.
+            Talk about the questions that are hard to understand.<br />
+            Tap the ones that are just long.
           </h1>
           <p className="lede">
-            The intuitive split is voice for the scary legal parts and tapping for the easy parts.
-            That split produces a seller reading fifty appliance names aloud, and it is wrong.
-            What actually decides the lane is where the difficulty sits: in working out what is
-            being asked, or in getting a long closed list of answers out of your head.
+            My first instinct was to put voice on the scary legal sections and leave tapping for
+            the easy stuff. Then I actually read the form. Section A is fifty appliance names, and
+            imagining someone saying all fifty out loud settled it.
+          </p>
+          <p className="lede">
+            So the question I ended up asking about each one was: what is actually slow here? If
+            it is working out what is being asked, talking helps. If it is just getting a long
+            list out of your head, tapping wins and it is not close.
           </p>
           <div className="design-counts">
             <div><strong>{tap}</strong><span>tap</span></div>
@@ -101,16 +105,23 @@ export function Design() {
 
         <section className="design-block">
           <div className="design-block-head">
-            <h2>Where the two lanes meet</h2>
+            <h2>None of this is a lock</h2>
           </div>
           <p className="design-rationale">
-            Routing is a default, never a lock. Every question renders its tap control regardless
-            of lane, and the voice agent can answer any question in the graph. Both write through
-            one server-side path, so an answer given aloud and an answer tapped are the same row in
-            the same table — which is what makes it possible to start in one lane, finish in the
-            other, and lose nothing. When the two lanes disagree about a question, the later answer
-            stands and the disagreement is queued for the seller to settle at review, rather than
-            being silently overwritten or thrown in their face mid-sentence.
+            All of the above is about what happens by default. Every question still shows its tap
+            controls, every question can be answered out loud, and the welcome screen offers to
+            talk you through the whole form if that is what you would rather do.
+          </p>
+          <p className="design-rationale">
+            Both paths call the same function on the server, so an answer you said and an answer
+            you tapped are the same row in the same table. That is what lets you start one way and
+            finish the other without losing anything.
+          </p>
+          <p className="design-rationale">
+            If the two disagree — you tapped no, then told the assistant yes — the newer answer
+            wins, because it is newer. But the disagreement gets saved and brought back at the end.
+            Changing your mind usually means you remembered something, and that is worth noticing
+            rather than quietly overwriting.
           </p>
         </section>
       </main>

@@ -30,29 +30,30 @@ question definitions the app runs on.
 The brief asks which parts of the form should be spoken and which should be
 tapped, and then to defend it. Here is the short version:
 
-**Speak when the hard part is understanding the question. Tap when the hard part
-is getting a long list out of your head.**
+**Talk about the questions that are hard to understand. Tap the ones that are
+just long.**
 
-I think the obvious answer — voice for the scary legal sections, tapping for the
-easy stuff — is wrong, and it took me a while to work out why.
+My first instinct was the obvious one: voice for the scary legal sections,
+tapping for the easy stuff. Then I read the form properly.
 
-Section A is about fifty checkboxes. Range, oven, microwave, trash compactor,
-gazebo, sauna. None of them are hard to understand. The difficulty is purely that
-there are fifty of them and you have to walk your house in your head. Reading
-fifty items aloud is slower than tapping them, easier to get wrong, and gives you
-no way to scan back for the one you forgot. So Section A is a grid.
+Section A is fifty checkboxes. Range, oven, microwave, trash compactor, gazebo,
+sauna. Not one of them is hard to understand — the work is just remembering what
+your own house has, and there are a lot of them. Picture someone saying all fifty
+out loud. It takes longer, you lose your place, and you can't glance back for the
+one you skipped. So Section A is a grid.
 
 Section C is sixteen questions like "any encroachments, easements or similar
-matters that may affect your interest in the subject property". A normal person
-can't answer that as written. The difficulty is working out what is being asked,
-and the fix for that is a conversation that can rephrase it, give an example, and
-check it landed. It is also the place where a bare yes is useless — the form
-wants the story, with dates and whether it got fixed — and typing that on a phone
-at 10pm is exactly where people give up. So Section C is voice.
+matters that may affect your interest in the subject property". Nobody who owns a
+house can answer that as written. The problem isn't typing — it's that the
+question makes no sense until someone rephrases it and gives an example, which is
+a conversation. And a bare yes is useless here anyway: the form wants what
+happened, roughly when, and whether anyone fixed it. That's a paragraph, and
+asking for a paragraph about someone's roof at ten at night is how you get an
+empty box. So Section C is voice.
 
-The split ends up being 62 tap / 19 voice across 81 questions. Every question
-carries its lane *and the reason* as data, and `/design` renders the table from
-that, so the page can't drift away from what the code does.
+The split lands at 63 tap / 19 voice across 82 questions. Each question stores
+its lane and the reason as data, and `/design` builds the table from that, so the
+page can't drift from what the code actually does.
 
 Two things I moved off the seller entirely:
 
@@ -62,11 +63,11 @@ Two things I moved off the seller entirely:
   sections that carry real legal risk in tiny type on page two. I re-cut it into
   eight chapters in the order a person can actually answer them.
 
-Routing is a default, not a lock. Every question still renders its tap control,
-and the voice agent can answer anything in the graph. Both go through one
-server-side write path, so an answer spoken and an answer tapped end up as the
-same row. That is what makes "start in one, finish in the other" real rather than
-a claim.
+None of it is a lock. Every question still shows its tap controls, every question
+can be answered out loud, and the welcome screen offers to talk you through the
+whole form if that's what you'd rather do. Both paths call the same function on
+the server, so an answer you said and an answer you tapped are the same row —
+which is what makes "start one way, finish the other" true rather than a claim.
 
 ---
 
