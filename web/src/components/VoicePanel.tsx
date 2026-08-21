@@ -302,9 +302,26 @@ export function VoicePanel({
     try {
       const info = await api.post<SessionInfo>(`/api/voice/${token}/session?scope=${scope}`);
 
-      const mic = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      // getUserMedia does not resolve while the browser's permission prompt is
+      // open, and that prompt lives in browser chrome the page cannot see. Left
+      // alone this card just reads "Connecting..." forever, which looks broken
+      // to someone who has not noticed the bubble at the top of their window.
+      const hint = window.setTimeout(() => {
+        setError(
+          "Your browser is asking for permission to use the microphone - look " +
+          "for the prompt at the top of the window. You can also just tap the " +
+          "answers instead.",
+        );
+      }, 3500);
+      let mic: MediaStream;
+      try {
+        mic = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        });
+      } finally {
+        window.clearTimeout(hint);
+      }
+      setError(null);
       stream.current = mic;
 
       const conn = new RTCPeerConnection();
