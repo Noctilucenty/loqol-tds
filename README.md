@@ -64,10 +64,23 @@ Two things I moved off the seller entirely:
   eight chapters in the order a person can actually answer them.
 
 None of it is a lock. Every question still shows its tap controls, every question
-can be answered out loud, and the welcome screen offers to talk you through the
-whole form if that's what you'd rather do. Both paths call the same function on
-the server, so an answer you said and an answer you tapped are the same row —
-which is what makes "start one way, finish the other" true rather than a claim.
+can be answered out loud, and both the welcome screen and the welcome-back screen
+offer to talk you through the whole form if that's what you'd rather do. Both
+paths call the same function on the server, so an answer you said and an answer
+you tapped are the same row — which is what makes "start one way, finish the
+other" true rather than a claim. A conversation resumed the next evening picks
+up from what is already answered rather than starting again at the top.
+
+Spoken pacing is not uniform, because the questions are not. The thirty-nine
+inventory items are asked a room at a time — "in the kitchen and laundry, do you
+have a range, an oven, a microwave, a dishwasher..." — and one reply populates
+the whole group, noes included. Asking those one at a time is technically
+correct and unbearable: thirty-nine turns to establish what two sentences
+establish. The questions that need care get the opposite treatment, one at a
+time and with follow-ups, because that is where a wrong answer costs something.
+The brief's compound items ("Water Heater: Gas / Solar / Electric") are one
+question in both lanes for the same reason — it is one thing a person knows
+about their house, not three.
 
 ---
 
@@ -300,6 +313,14 @@ admitting, because they're the interesting ones:
   `response.create`. It recorded the first answer and stopped. This is why the
   fix is now in the code and why there's a note about it here rather than a
   claim that voice always worked.
+- **...and then asked for six turns at once.** The fix above asked for a turn
+  after every tool result. That was fine while answers arrived one at a time,
+  and wrong the moment a whole room could be answered in one breath: seven
+  `record_answer` calls became seven `response.create` calls, the realtime API
+  allows one active response, and the six rejections were rendered to the seller
+  as an error banner. Turns are coalesced now. Both halves of this only showed
+  up by driving a live session in a real browser — the unit tests and the
+  headless smoke pass either way, which is the honest limit of both.
 - **A local SQLite file was being pushed to this public repo.** `*.db` in
   .gitignore doesn't match `loqol.db-wal`, and in WAL mode the sidecar is where
   the rows live. Purged from history, and the ignore rule is fixed.
@@ -355,7 +376,7 @@ DATABASE_URL=postgresql://...  # defaults to SQLite
 ```
 
 ```bash
-.venv/bin/python -m pytest -q                         # 73 tests
+.venv/bin/python -m pytest -q                         # 84 tests
 .venv/bin/python scripts/check_hooks.py               # rules-of-hooks check
 .venv/bin/python scripts/audit.py <url>               # drive the real workflow
 npm --prefix web i -D playwright && npx playwright install chromium
@@ -379,9 +400,7 @@ Next, in order:
    for the ruled lines, the local preview gets an addendum page but sending for
    signature refuses rather than shipping something truncated. The fix is a
    per-submission template that includes the addendum page.
-3. **Resumable voice.** A voice session starts fresh each time; it should pick up
-   knowing what's already been covered.
-4. **The other California forms.** Only `questions.py` and the widget map are
+3. **The other California forms.** Only `questions.py` and the widget map are
    TDS-specific. SPQ and NHD would reuse everything else.
 
 Knowingly left out:
