@@ -614,3 +614,62 @@ def test_a_lane_disagreement_flag_names_the_question_it_is_about():
     # And an unrecognisable flag still degrades to whatever the caller wants.
     assert flag_prompt("mystery", [], "fallback") == "fallback"
     assert flag_prompt("mystery", ["not.a.question"], "fallback") == "fallback"
+
+
+def test_a_group_call_records_the_whole_room_in_one_request(client, seller_link):
+    """Seven round-trips is several seconds of silence on a voice call."""
+    token = seller_link["token"]
+    r = client.post(f"/api/voice/{token}/answers", json={
+        "items": [
+            {"id": "A.range", "value": "yes"},
+            {"id": "A.oven", "value": "yes"},
+            {"id": "A.microwave", "value": "no"},
+            {"id": "A.dishwasher", "value": "yes"},
+            {"id": "A.trash_compactor", "value": "no"},
+            {"id": "A.garbage_disposal", "value": "no"},
+            {"id": "A.washer_dryer_hookups", "value": "yes"},
+        ],
+        "transcript": "Range, oven and dishwasher. None of the others. We do have hookups.",
+    })
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert len(body["recorded"]) == 7, body
+    assert body["refused"] == []
+
+    state = client.get(f"/api/s/{token}/state").json()
+    answers = {a: v["value"] for a, v in state["answers"].items()}
+    assert answers["A.range"] is True and answers["A.microwave"] is False
+
+
+def test_a_group_call_cannot_fill_in_the_rest_of_the_form(client, seller_link):
+    """It filled sixty-eight items with "unknown" off three sentences.
+
+    Given a tool that takes a list, the cheapest way to "finish" is to emit
+    every remaining item at once. On a legal disclosure that is fabrication, so
+    a call may only cover the one group that was actually read out.
+    """
+    r = client.post(f"/api/voice/{seller_link['token']}/answers", json={
+        "items": [
+            {"id": "A.range", "value": "yes"},        # Kitchen and laundry
+            {"id": "A.gazebo", "value": "unknown"},   # Yard
+            {"id": "A.carport", "value": "unknown"},  # Parking
+        ],
+    })
+    assert r.status_code == 400, r.text
+    assert "one group at a time" in r.json()["detail"]
+
+    # And nothing from the refused call was written.
+    state = client.get(f"/api/s/{seller_link['token']}/state").json()
+    assert "A.range" not in state["answers"]
+
+
+def test_the_brief_forbids_answering_for_a_silent_seller():
+    from app.routers.voice_routes import build_instructions
+
+    class Deal:
+        property_address = "1 Test St"
+        seller_name = "Dana"
+
+    brief = build_instructions(Deal(), {}, "all")
+    assert "Silence is not an" in brief
+    assert "Do not fill anything in for them" in brief

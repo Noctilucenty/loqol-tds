@@ -133,6 +133,31 @@ export function VoicePanel({
         stop(true);
         return;
       }
+      // A whole run-through group in one request. Seven separate calls meant
+      // seven round-trips before the assistant could speak again, which the
+      // seller experiences as several seconds of silence after answering.
+      if (name === "record_group") {
+        try {
+          const res = await api.post<{
+            recorded: { questionId: string }[];
+            refused: { questionId: string | null; error: string }[];
+          }>(`/api/voice/${token}/answers`, args);
+          const ids = res.recorded.map((r) => r.questionId);
+          if (ids.length) {
+            setSaved((s) => [...s, ...ids].slice(-4));
+            ids.forEach(onAnswerRecorded);
+          }
+          sendToolResult(callId, {
+            ok: true,
+            recorded: ids.length,
+            ...(res.refused.length ? { refused: res.refused } : {}),
+          });
+        } catch (e: any) {
+          sendToolResult(callId, { ok: false, error: e?.message ?? "rejected" });
+        }
+        return;
+      }
+
       if (name !== "record_answer") return;
       try {
         const res = await api.post<{ questionId: string }>(`/api/voice/${token}/answer`, args);

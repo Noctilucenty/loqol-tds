@@ -109,9 +109,17 @@ def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
         "- Approximate dates are fine. 'A few years ago' is a usable answer.",
         "",
         "Recording answers:",
-        "- Call record_answer for each answer as soon as it is usable. If they "
-        "answered five things in one breath, that is five separate calls, made "
-        "straight away - do not wait until the end of the group.",
+        "- A run-through group goes back as ONE record_group call covering every "
+        "item in it, noes included. Anything else - the questions that need "
+        "care - goes back as record_answer, one per answer, as soon as it is "
+        "usable.",
+        "- Do not read back what you just captured. \"Got it\" and straight into "
+        "the next group. The seller can see what was recorded on screen.",
+        "- Never record an item the seller has not actually addressed. Silence "
+        "is not an \"unknown\" - \"unknown\" is what they say when they do not "
+        "know, and it goes on a legal disclosure either way. If they go quiet, "
+        "ask again or wait. Do not fill anything in for them, ever, and never "
+        "run ahead to groups you have not read out yet.",
         "- Only use question ids from the list below.",
         "- Where a question lists options, `value` must be one of the option ids "
         "exactly as written, or a list of them. Never invent an option, and "
@@ -192,7 +200,11 @@ def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
 
 
 def build_tools(answers: dict, scope: str = "voice") -> list[dict]:
-    ids = [q.id for q in _voice_questions(answers, scope)]
+    questions = _voice_questions(answers, scope)
+    ids = [q.id for q in questions]
+    quickfire_ids = [
+        q.id for q in questions if q.kind == "bool" and q.why.value == "enumeration"
+    ]
     return [
         {
             "type": "function",
@@ -223,6 +235,42 @@ def build_tools(answers: dict, scope: str = "voice") -> list[dict]:
                     },
                 },
                 "required": ["question_id", "value", "status"],
+            },
+        },
+        {
+            "type": "function",
+            "name": "record_group",
+            "description": (
+                "Record a whole run-through group at once, from one reply. Use "
+                "this for the quick run-through - one call for the entire group, "
+                "including the items they said no to. Never make several "
+                "record_answer calls where one record_group would do: the "
+                "seller is sitting in silence while you write."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "description": "Every item in the group you just read out.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string", "enum": quickfire_ids or ["none"]},
+                                "value": {
+                                    "type": "string",
+                                    "enum": ["yes", "no", "unknown"],
+                                },
+                            },
+                            "required": ["id", "value"],
+                        },
+                    },
+                    "transcript": {
+                        "type": "string",
+                        "description": "What the seller said for the group, once.",
+                    },
+                },
+                "required": ["items"],
             },
         },
         {
@@ -385,6 +433,97 @@ def voice_answer(token: str, body: dict, request: Request, db: Session = Depends
         "revision": row.revision,
         "next": next_question_id(answers, after=qid),
     }
+
+
+def _apply_one(db, ds, qid, value, raw_status, transcript, answers):
+    """Validate and store one proposed answer. Raises HTTPException on refusal.
+
+    Shared by record_answer and record_group so a grouped write cannot drift
+    into being the lenient one.
+    """
+    q = QUESTIONS_BY_ID.get(qid)
+    if q is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unknown question {qid!r}")
+    if not is_visible(q, answers):
+        raise HTTPException(status.HTTP_409_CONFLICT, f"{qid} is not currently being asked")
+
+    try:
+        value, coerced_status = _coerce(q, value, raw_status)
+    except ValueError_ as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+    try:
+        row = write_answer(
+            db, ds.id, qid, value,
+            status=AnswerStatus(coerced_status),
+            source=AnswerSource.VOICE,
+            transcript=transcript,
+        )
+    except FrozenDisclosure as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    return value, coerced_status, row
+
+
+@router.post("/{token}/answers")
+def voice_answers(token: str, body: dict, request: Request, db: Session = Depends(get_db)):
+    """Apply a whole `record_group` call in one request.
+
+    A run-through group is seven or eight items, and doing them as seven
+    separate tool calls meant the model emitting seven full JSON objects and the
+    browser making seven round-trips before it could say anything back. That is
+    several seconds of silence after the seller has already answered, which on a
+    voice call reads as the thing being broken.
+
+    Refusals are per item: one bad id does not throw away the six good answers
+    next to it, because the seller did say them and would have to say them again.
+    """
+    ds = resolve_seller_token(db, token, request)
+    items = body.get("items")
+    if not isinstance(items, list) or not items:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "items must be a non-empty list")
+
+    transcript = body.get("transcript")
+
+    # One call, one group. Without this the cheapest way for the model to
+    # "finish" is to emit every remaining item at once, which it will do - it
+    # filled sixty-eight items with "unknown" off three sentences in testing.
+    # On a disclosure that is fabrication, not efficiency.
+    groups = {
+        QUESTIONS_BY_ID[i["id"]].group
+        for i in items
+        if isinstance(i, dict) and i.get("id") in QUESTIONS_BY_ID
+    }
+    if len(groups) > 1:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "record_group covers one group at a time; these span "
+            + ", ".join(sorted(g or "(none)" for g in groups)),
+        )
+
+    recorded: list[dict] = []
+    refused: list[dict] = []
+
+    for item in items:
+        if not isinstance(item, dict):
+            refused.append({"questionId": None, "error": "not an object"})
+            continue
+        qid = item.get("id") or item.get("question_id")
+        answers = answers_dict(db, ds.id)
+        try:
+            value, coerced_status, _row = _apply_one(
+                db, ds, qid, item.get("value"),
+                item.get("status", "answered"), transcript, answers,
+            )
+        except HTTPException as exc:
+            # A frozen disclosure is not per-item - nothing else will land either.
+            if exc.status_code == status.HTTP_409_CONFLICT and "id" not in str(exc.detail):
+                if not recorded:
+                    raise
+            refused.append({"questionId": qid, "error": str(exc.detail)})
+            continue
+        recorded.append({"questionId": qid, "value": value, "status": coerced_status})
+
+    return {"ok": True, "recorded": recorded, "refused": refused}
 
 
 def _coerce(q, value, status_hint: str) -> tuple:
