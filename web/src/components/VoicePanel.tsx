@@ -17,6 +17,9 @@ interface Props {
    *  visible finish line is the thing people bail out of. */
   covered?: number;
   total?: number;
+  /** "voice" asks only the routed questions. "all" asks everything still
+   *  unanswered, for a seller who chose to do the whole form by talking. */
+  scope?: "voice" | "all";
 }
 
 interface SessionInfo { clientSecret: string; model: string; maxSeconds: number }
@@ -32,7 +35,7 @@ interface SessionInfo { clientSecret: string; model: string; maxSeconds: number 
  * visible, and coerces the value into the shape the form can hold.
  */
 export function VoicePanel({
-  token, onAnswerRecorded, onFinished, disabled, covered = 0, total = 0,
+  token, onAnswerRecorded, onFinished, disabled, covered = 0, total = 0, scope = "voice",
 }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -167,7 +170,7 @@ export function VoicePanel({
     setError(null);
     setPhase("connecting");
     try {
-      const info = await api.post<SessionInfo>(`/api/voice/${token}/session`);
+      const info = await api.post<SessionInfo>(`/api/voice/${token}/session?scope=${scope}`);
 
       const mic = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -245,7 +248,7 @@ export function VoicePanel({
       setPhase("error");
       stream.current?.getTracks().forEach((t) => t.stop());
     }
-  }, [token, onMessage, stop]);
+  }, [token, onMessage, stop, scope]);
 
   const live = phase === "live";
 

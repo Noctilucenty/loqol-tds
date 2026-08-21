@@ -38,6 +38,10 @@ export function SellerFlow() {
   //: answer fifty checkboxes, which is the whole routing argument - but a seller
   //: who cannot use the grid must still have a way through.
   const [groupVoiceOpen, setGroupVoiceOpen] = useState(false);
+  //: The seller asked to do the whole form by talking, so the assistant opens on
+  //: every screen and its session covers every question rather than the 19 the
+  //: router would have picked.
+  const [spokenThrough, setSpokenThrough] = useState(false);
 
   const queue = useRef<Promise<unknown>>(Promise.resolve());
 
@@ -159,7 +163,16 @@ export function SellerFlow() {
   if (!boot || !state || !form) return <SellerLoading />;
 
   if (!started && state.progress.answered === 0) {
-    return <Welcome state={state} onStart={() => setStarted(true)} />;
+    return (
+      <Welcome
+        state={state}
+        onStart={() => setStarted(true)}
+        onStartTalking={() => {
+          setSpokenThrough(true);
+          setStarted(true);
+        }}
+      />
+    );
   }
   if (!started && state.progress.answered > 0) {
     return <Resume state={state} onStart={() => setStarted(true)} />;
@@ -241,11 +254,12 @@ export function SellerFlow() {
             <p className="muted small">
               Tap everything the property has. Leave the rest.
             </p>
-            {groupVoiceOpen ? (
+            {groupVoiceOpen || spokenThrough ? (
               <VoicePanel
                 token={token}
                 onAnswerRecorded={refresh}
                 onFinished={refresh}
+                scope={spokenThrough ? "all" : "voice"}
               />
             ) : (
               <button type="button" className="talk-instead" onClick={() => setGroupVoiceOpen(true)}>
@@ -277,6 +291,7 @@ export function SellerFlow() {
             question={step.question}
             answers={answers}
             knownAddress={state.property.address}
+            spokenThrough={spokenThrough}
             onAnswer={answer}
             onVoiceAnswer={refresh}
             onVoiceFinished={onVoiceFinished}
@@ -349,11 +364,13 @@ function QuestionStep({
   voiceCovered,
   voiceTotal,
   knownAddress,
+  spokenThrough,
 }: {
   token: string;
   question: any;
   answers: any;
   knownAddress: string;
+  spokenThrough: boolean;
   onAnswer: (id: string, v: unknown, s?: "answered" | "unknown") => void;
   onVoiceAnswer: () => void;
   onVoiceFinished: () => void;
@@ -361,7 +378,7 @@ function QuestionStep({
   voiceCovered: number;
   voiceTotal: number;
 }) {
-  const voiceLane = question.lane === "voice";
+  const voiceLane = question.lane === "voice" || spokenThrough;
   // Routing decides the *default*, never what is possible. On a tap question the
   // assistant is one line away rather than absent, so a seller who would rather
   // talk is never told they may not. That is the brief's "should never feel like
@@ -379,6 +396,7 @@ function QuestionStep({
           onFinished={onVoiceFinished}
           covered={voiceCovered}
           total={voiceTotal}
+          scope={spokenThrough ? "all" : "voice"}
         />
       )}
 
@@ -428,7 +446,13 @@ function QuestionStep({
   );
 }
 
-function Welcome({ state, onStart }: { state: SellerState; onStart: () => void }) {
+function Welcome({
+  state, onStart, onStartTalking,
+}: {
+  state: SellerState;
+  onStart: () => void;
+  onStartTalking: () => void;
+}) {
   return (
     <div className="wrap wrap-narrow gate rise">
       <div className="eyebrow">California Transfer Disclosure Statement</div>
@@ -453,9 +477,17 @@ function Welcome({ state, onStart }: { state: SellerState; onStart: () => void }
           Your agent sees it only after you finish, and you sign it separately.
         </Point>
       </div>
-      <button className="btn btn-primary btn-lg" onClick={onStart}>
-        Start
-      </button>
+      <div className="gate-actions">
+        <button className="btn btn-primary btn-lg" onClick={onStart}>
+          Start tapping
+        </button>
+        <button className="btn btn-ghost btn-lg" onClick={onStartTalking}>
+          Talk me through the whole thing
+        </button>
+      </div>
+      <p className="tiny muted gate-note">
+        Either way you can switch at any point &mdash; every question takes both.
+      </p>
     </div>
   );
 }

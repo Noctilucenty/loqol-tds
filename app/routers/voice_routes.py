@@ -39,14 +39,25 @@ router = APIRouter(prefix="/api/voice", tags=["voice"])
 REALTIME_SESSIONS_URL = "https://api.openai.com/v1/realtime/client_secrets"
 
 
-def _voice_questions(answers: dict) -> list:
-    return [
-        q for q in SELLER_QUESTIONS
-        if q.lane.value == "voice" and is_visible(q, answers)
-    ]
+def _voice_questions(answers: dict, scope: str = "voice") -> list:
+    """Questions this session may ask.
+
+    `voice` is the routed default: the sixteen comprehension questions and the
+    three narratives. `all` is for a seller who chose to do the whole form by
+    talking - they get everything still unanswered, including the inventory.
+
+    Offering `all` costs the routing argument nothing. The claim was never that
+    tapping is the only sane way to answer fifty checkboxes, it is that tapping
+    is *faster* for them. A seller who cannot use a grid at all, or simply
+    prefers to talk, must still have a way through the form.
+    """
+    pool = [q for q in SELLER_QUESTIONS if is_visible(q, answers)]
+    if scope != "all":
+        pool = [q for q in pool if q.lane.value == "voice"]
+    return pool
 
 
-def build_instructions(deal: Deal, answers: dict) -> str:
+def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
     """The agent's brief.
 
     Written as constraints rather than persona. The failure modes that matter
@@ -54,8 +65,14 @@ def build_instructions(deal: Deal, answers: dict) -> str:
     needs, and treating "I'm not sure" as a no - so those are what the prompt
     spends its words on.
     """
-    pending = _voice_questions(answers)
+    pending = _voice_questions(answers, scope)
     remaining = [q for q in pending if answers.get(q.id) in (None, "", [])]
+
+    # Inventory items are one-word yes/nos with no ambiguity. Spelling out
+    # context for each would bury the questions that actually need it, and blow
+    # the prompt out to tens of thousands of characters.
+    quickfire = [q for q in remaining if q.kind == "bool" and q.why.value == "enumeration"]
+    considered = [q for q in remaining if q not in quickfire]
 
     lines = [
         "You are helping a homeowner complete the California Transfer Disclosure "
@@ -83,27 +100,61 @@ def build_instructions(deal: Deal, answers: dict) -> str:
         "Recording answers:",
         "- Call record_answer as soon as an answer is usable. Do not batch.",
         "- Only use question ids from the list below.",
+        "- Where a question lists options, `value` must be one of the option ids "
+        "exactly as written, or a list of them. Never invent an option, and "
+        "never answer one of those with yes or no.",
         "- If they change an earlier answer, call record_answer again with the new "
         "value. The change is tracked; do not argue with them about it.",
         "- Call finish_section when the remaining questions are done.",
         "",
-        "Questions still to cover:",
     ]
-    for q in remaining:
-        lines.append(f"- {q.id}: {q.prompt}")
+
+    def describe(q) -> list[str]:
+        out = [f"- {q.id}: {q.prompt}"]
+        if q.options:
+            # Without this the model guesses. It answered "yes" to a question
+            # whose only valid ids are `is` and `is_not`, and the server
+            # correctly rejected the write - so the answer was simply lost.
+            ids = ", ".join(f'"{o.id}" ({o.label})' for o in q.options)
+            kind = "choose one" if q.kind == "single" else "choose any that apply"
+            out.append(f"    options, {kind}: {ids}")
+        if q.kind == "int":
+            out.append("    value must be a whole number.")
         if q.explain:
-            lines.append(f"    context: {q.explain}")
+            out.append(f"    context: {q.explain}")
         if q.example:
-            lines.append(f"    example answer: {q.example}")
+            out.append(f"    example answer: {q.example}")
         if q.needs:
-            lines.append(f"    a usable answer needs: {q.needs}")
+            out.append(f"    a usable answer needs: {q.needs}")
+        return out
+
     if not remaining:
-        lines.append("- (none: thank them and call finish_section)")
+        lines.append("Nothing left to cover: thank them and call finish_section.")
+        return "\n".join(lines)
+
+    if quickfire:
+        lines += [
+            "Quick run-through. These are plain 'does the property have this?' "
+            "questions with no ambiguity. Read them in batches of four or five, "
+            "let the seller answer several at once, and record each one as you "
+            "go. Do not explain these unless asked.",
+        ]
+        lines += [f"- {q.id}: {q.prompt}" for q in quickfire]
+        lines.append("")
+
+    if considered:
+        lines.append(
+            "Questions that need more care. One at a time, and follow up where "
+            "the answer is not yet usable."
+        )
+        for q in considered:
+            lines += describe(q)
+
     return "\n".join(lines)
 
 
-def build_tools(answers: dict) -> list[dict]:
-    ids = [q.id for q in _voice_questions(answers)]
+def build_tools(answers: dict, scope: str = "voice") -> list[dict]:
+    ids = [q.id for q in _voice_questions(answers, scope)]
     return [
         {
             "type": "function",
@@ -160,8 +211,17 @@ def voice_config(token: str, request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/{token}/session")
-async def mint_session(token: str, request: Request, db: Session = Depends(get_db)):
-    """Mint an ephemeral realtime client secret for this browser."""
+async def mint_session(
+    token: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    scope: str = "voice",
+):
+    """Mint an ephemeral realtime client secret for this browser.
+
+    `scope=all` widens the session to every question still unanswered, for a
+    seller who chose to do the whole form by talking.
+    """
     cfg = settings()
     ds = resolve_seller_token(db, token, request)
 
@@ -191,8 +251,8 @@ async def mint_session(token: str, request: Request, db: Session = Depends(get_d
         "session": {
             "type": "realtime",
             "model": cfg.openai_realtime_model,
-            "instructions": build_instructions(deal, answers),
-            "tools": build_tools(answers),
+            "instructions": build_instructions(deal, answers, scope),
+            "tools": build_tools(answers, scope),
             "audio": {
                 "input": {
                     "transcription": {"model": "gpt-4o-mini-transcribe"},

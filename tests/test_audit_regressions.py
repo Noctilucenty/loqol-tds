@@ -450,3 +450,77 @@ def test_the_seller_link_is_never_plain_http_in_production(client, seller_link, 
                     headers={"X-Forwarded-Proto": "https"})
     assert r.status_code == 200
     assert r.json()["url"].startswith("https://"), r.json()["url"]
+
+
+# ---------------------------------------------------------------------------
+# The voice agent has to be told what a valid answer looks like
+# ---------------------------------------------------------------------------
+
+def test_every_choice_question_states_its_option_ids_to_the_model():
+    """Observed live: asked whether they live in the home, the model recorded
+    "yes" for a question whose only valid ids are `is` and `is_not`. The server
+    correctly refused the write, so the answer was simply lost."""
+    from app.routers.voice_routes import build_instructions
+    from app.tds.questions import SELLER_QUESTIONS
+
+    class Deal:
+        property_address = "1 Test St"
+        seller_name = "Dana"
+
+    brief = build_instructions(Deal(), {}, "all")
+    missing = []
+    for q in SELLER_QUESTIONS:
+        if q.kind in ("single", "multi") and q.options and q.id in brief:
+            for option in q.options:
+                if f'"{option.id}"' not in brief:
+                    missing.append(f"{q.id}:{option.id}")
+    assert not missing, f"option ids never shown to the model: {missing}"
+
+
+def test_the_all_scope_offers_every_unanswered_question():
+    from app.routers.voice_routes import build_tools
+    from app.tds.questions import SELLER_QUESTIONS
+
+    routed = build_tools({}, "voice")[0]["parameters"]["properties"]["question_id"]["enum"]
+    everything = build_tools({}, "all")[0]["parameters"]["properties"]["question_id"]["enum"]
+    assert len(routed) == 16
+    assert len(everything) > len(routed)
+    assert set(routed).issubset(set(everything))
+    assert all(q in {x.id for x in SELLER_QUESTIONS} for q in everything)
+
+
+def test_inventory_items_are_batched_rather_than_explained_one_by_one():
+    """66 questions each with context would bury the ones that need it."""
+    from app.routers.voice_routes import build_instructions
+
+    class Deal:
+        property_address = "1 Test St"
+        seller_name = "Dana"
+
+    brief = build_instructions(Deal(), {}, "all")
+    assert "Quick run-through" in brief
+    assert len(brief) < 20_000, f"prompt is {len(brief)} chars"
+
+
+def test_what_the_live_model_recorded_all_survives_the_write_path():
+    """Verbatim from a real gpt-realtime session driven through the all scope."""
+    recorded = [
+        ("P.address_ok", "yes", "answered"), ("P.occupying", "is", "answered"),
+        ("A.range", "yes", "answered"), ("A.microwave", "no", "answered"),
+        ("A.garbage_disposal", "unknown", "skipped"),
+        ("A.water_heater", "gas", "answered"),          # bare string for a multi
+        ("A.water_supply", ["city"], "answered"),
+        ("A.gas_supply", ["utility"], "answered"),
+    ]
+    for qid, value, status in recorded:
+        result, _ = coerce(QUESTIONS_BY_ID[qid], value, status)
+        assert result is not None or status == "skipped", qid
+
+    answers = {
+        qid: coerce(QUESTIONS_BY_ID[qid], v, s)[0]
+        for qid, v, s in recorded if s == "answered"
+    }
+    fields, _ = resolve(answers)
+    assert fields["SellerIsOccupying"] is True
+    assert fields["SellerNotOccupying"] is False
+    assert fields["Gas2"] is True and fields["City"] is True

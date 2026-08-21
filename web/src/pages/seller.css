@@ -101,3 +101,7 @@
   display: grid; place-items: center;
   background: var(--brass-wash); color: var(--brass-deep);
 }
+
+.gate-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.9rem; }
+.gate-actions .btn { margin-top: 0; }
+.gate-note { margin-top: .85rem; }
