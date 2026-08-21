@@ -255,7 +255,15 @@ export function DealDetail() {
                   <span className={`chip ${f.severity === "hard" ? "chip-clay" : "chip-brass"}`}>
                     {f.severity}
                   </span>
-                  <p className="small" style={{ margin: ".4rem 0 0" }}>{f.message}</p>
+                  {/* The question first. "Answered no in the form lane, then yes
+                      in the voice lane" is not actionable until you know what
+                      it was about. */}
+                  {f.prompt && (
+                    <p className="small" style={{ margin: ".4rem 0 0", fontWeight: 600 }}>
+                      {f.prompt}
+                    </p>
+                  )}
+                  <p className="small muted" style={{ margin: ".2rem 0 0" }}>{f.message}</p>
                 </div>
               ))}
             </div>
