@@ -656,7 +656,11 @@ def test_a_group_call_cannot_fill_in_the_rest_of_the_form(client, seller_link):
         ],
     })
     assert r.status_code == 400, r.text
-    assert "one group at a time" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert "One call, one group" in detail
+    # The refusal has to say what to do instead, or the model degrades to one
+    # record_answer per item - which is the slow path this all exists to avoid.
+    assert "record_group again" in detail
 
     # And nothing from the refused call was written.
     state = client.get(f"/api/s/{seller_link['token']}/state").json()

@@ -70,6 +70,11 @@ export function VoicePanel({
   // gave do not belong on a disclosure, so a turn in which the seller has not
   // spoken cannot write.
   const sellerSpoke = useRef(false);
+  // What the assistant said this turn, and how many times we have had to prod
+  // it to actually ask the question it just announced.
+  const turnText = useRef("");
+  const nudges = useRef(0);
+  const calledTool = useRef(false);
   onFinishedRef.current = onFinished;
 
   const stop = useCallback(
@@ -158,16 +163,21 @@ export function VoicePanel({
           const res = await api.post<{
             recorded: { questionId: string }[];
             refused: { questionId: string | null; error: string }[];
+            next: unknown;
           }>(`/api/voice/${token}/answers`, args);
           const ids = res.recorded.map((r) => r.questionId);
           if (ids.length) {
             setSaved((s) => [...s, ...ids].slice(-4));
             ids.forEach(onAnswerRecorded);
           }
+          // `next` is the whole point: the assistant kept ending its turn on
+          // "ready to move on to safety and security" and leaving the seller
+          // waiting. The next question rides back with the last one.
           sendToolResult(callId, {
             ok: true,
             recorded: ids.length,
             ...(res.refused.length ? { refused: res.refused } : {}),
+            next: res.next,
           });
         } catch (e: any) {
           sendToolResult(callId, { ok: false, error: e?.message ?? "rejected" });
@@ -177,10 +187,12 @@ export function VoicePanel({
 
       if (name !== "record_answer") return;
       try {
-        const res = await api.post<{ questionId: string }>(`/api/voice/${token}/answer`, args);
+        const res = await api.post<{ questionId: string; next: unknown }>(
+          `/api/voice/${token}/answer`, args,
+        );
         setSaved((s) => [...s.slice(-4), res.questionId]);
         onAnswerRecorded(res.questionId);
-        sendToolResult(callId, { ok: true });
+        sendToolResult(callId, { ok: true, next: res.next });
       } catch (e: any) {
         // Tell the model it failed so it re-asks, rather than believing it saved.
         sendToolResult(callId, { ok: false, error: e?.message ?? "rejected" });
@@ -201,6 +213,7 @@ export function VoicePanel({
         case "response.output_audio_transcript.delta":
         case "response.audio_transcript.delta":
           partial.current += ev.delta ?? "";
+          turnText.current += ev.delta ?? "";
           setTurns((t) => {
             const next = [...t];
             const last = next[next.length - 1];
@@ -220,6 +233,7 @@ export function VoicePanel({
           }
           break;
         case "response.function_call_arguments.done":
+          calledTool.current = true;
           try {
             handleToolCall(ev.name, JSON.parse(ev.arguments || "{}"), ev.call_id);
           } catch {
@@ -229,16 +243,44 @@ export function VoicePanel({
         case "response.created":
           responseActive.current = true;
           break;
-        case "response.done":
+        case "response.done": {
           responseActive.current = false;
           // One utterance may legitimately answer several things, so the gate
           // clears per turn rather than per recorded answer.
           sellerSpoke.current = false;
+
+          const spoken = turnText.current;
+          const usedTool = calledTool.current;
+          turnText.current = "";
+          calledTool.current = false;
+
           if (wantTurn.current) {
             wantTurn.current = false;
             requestTurn();
+            break;
+          }
+
+          // "Got it - let me ask the next group of safety and security questions
+          // in one shot." ...and then it stops, and the seller sits there
+          // waiting for a question that never comes until they prod it. Telling
+          // it not to do this in the brief and again in every tool result both
+          // help and neither is reliable, so if a turn ends on an announcement
+          // rather than a question, take another turn immediately.
+          const dangling =
+            spoken.trim().length > 0 &&
+            !usedTool &&
+            !spoken.includes("?") &&
+            /\b(next|move on|moving on|coming up|one shot|go through|run through)\b/i.test(
+              spoken.slice(-200),
+            );
+          if (dangling && nudges.current < 3) {
+            nudges.current += 1;
+            requestTurn();
+          } else if (!dangling) {
+            nudges.current = 0;
           }
           break;
+        }
         case "error":
           // A turn we asked for while one was already running is our own race,
           // not something the seller did. Recover instead of alarming them.

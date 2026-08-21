@@ -113,8 +113,17 @@ def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
         "item in it, noes included. Anything else - the questions that need "
         "care - goes back as record_answer, one per answer, as soon as it is "
         "usable.",
-        "- Do not read back what you just captured. \"Got it\" and straight into "
-        "the next group. The seller can see what was recorded on screen.",
+        "- NEVER end your turn announcing what is coming. \"Next up is safety "
+        "and security\", \"ready to move on\", \"let's do the next group\" - if "
+        "you say any of that, ask the group in the same breath. Ending on an "
+        "announcement leaves the seller sitting in silence waiting for a "
+        "question that never comes, and they have to prompt you to continue. "
+        "Every turn you take ends with either a question or the form being "
+        "finished.",
+        "- Do not read back what you just captured. The seller can see what was "
+        "recorded on screen, and repeating eleven items to them is eleven "
+        "seconds they did not need to spend. \"Got it\" then straight into the "
+        "next question.",
         "- Never record an item the seller has not actually addressed. Silence "
         "is not an \"unknown\" - \"unknown\" is what they say when they do not "
         "know, and it goes on a legal disclosure either way. If they go quiet, "
@@ -175,6 +184,11 @@ def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
             "\"the first two and the last one, none of the rest\", and record "
             "every item in the group from it, the noes as well as the yeses.",
             "",
+            "\"Nothing else\", \"that's all\", \"just those\" mean nothing else IN "
+            "THE GROUP YOU JUST READ OUT. They never refer to items in groups "
+            "you have not asked about yet - the seller cannot answer for a list "
+            "they have not heard.",
+            "",
             "\"Unknown\" is for an item they told you they do not know about. It "
             "is NOT for an item they simply did not mention - those two look the "
             "same in the recording and mean very different things on a legal "
@@ -213,8 +227,10 @@ def build_tools(answers: dict, scope: str = "voice") -> list[dict]:
             "type": "function",
             "name": "record_answer",
             "description": (
-                "Record the seller's answer to one question. Call this the moment "
-                "the answer is usable, not at the end."
+                "Record the seller's answer to ONE question. For the questions "
+                "that need care. Do not use this for run-through items - a "
+                "group goes back as a single record_group call, because eleven "
+                "of these in a row is eleven round-trips of silence."
             ),
             "parameters": {
                 "type": "object",
@@ -443,7 +459,43 @@ def voice_answer(token: str, body: dict, request: Request, db: Session = Depends
         "value": value,
         "status": coerced_status,
         "revision": row.revision,
-        "next": next_question_id(answers, after=qid),
+        "next": _next_ask(answers, "all"),
+    }
+
+
+def _next_ask(answers: dict, scope: str) -> dict | None:
+    """What the assistant should say next, handed back with every tool result.
+
+    A rule in the system prompt was not holding: the assistant would record an
+    answer, say "ready to move on to safety and security", and end its turn -
+    leaving the seller sitting in silence waiting for a question that never
+    came, until they prompted it to continue. That is most of the "sometimes it
+    takes ages" complaint.
+
+    So the next question travels with the result of the last one. The model
+    cannot skim past its own tool output the way it skims a long brief.
+    """
+    remaining = _voice_questions(answers, scope)
+    if not remaining:
+        return None
+
+    head = remaining[0]
+    if head.kind == "bool" and head.why.value == "enumeration":
+        group = head.group
+        items = [
+            {"id": q.id, "name": q.prompt}
+            for q in remaining
+            if q.group == group and q.kind == "bool" and q.why.value == "enumeration"
+        ]
+        return {
+            "say": f"Read out the {group} group now, in this turn, and wait for their answer.",
+            "group": group,
+            "items": items,
+        }
+    return {
+        "say": "Ask this next, now, in this turn.",
+        "question_id": head.id,
+        "prompt": head.prompt,
     }
 
 
@@ -508,8 +560,12 @@ def voice_answers(token: str, body: dict, request: Request, db: Session = Depend
     if len(groups) > 1:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "record_group covers one group at a time; these span "
-            + ", ".join(sorted(g or "(none)" for g in groups)),
+            "One call, one group - these span "
+            + ", ".join(sorted(g or "(none)" for g in groups))
+            + ". Send record_group again with only the items from the group you "
+            "just read out, and leave the rest for when you ask about them. Do "
+            "not fall back to one record_answer per item; that is slow for the "
+            "seller and these are run-through items.",
         )
 
     recorded: list[dict] = []
@@ -535,7 +591,12 @@ def voice_answers(token: str, body: dict, request: Request, db: Session = Depend
             continue
         recorded.append({"questionId": qid, "value": value, "status": coerced_status})
 
-    return {"ok": True, "recorded": recorded, "refused": refused}
+    return {
+        "ok": True,
+        "recorded": recorded,
+        "refused": refused,
+        "next": _next_ask(answers_dict(db, ds.id), "all"),
+    }
 
 
 def _coerce(q, value, status_hint: str) -> tuple:
