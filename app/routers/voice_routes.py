@@ -71,8 +71,17 @@ def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
     # Inventory items are one-word yes/nos with no ambiguity. Spelling out
     # context for each would bury the questions that actually need it, and blow
     # the prompt out to tens of thousands of characters.
-    quickfire = [q for q in remaining if q.kind == "bool" and q.why.value == "enumeration"]
-    considered = [q for q in remaining if q not in quickfire]
+    def is_quickfire(q) -> bool:
+        return q.kind == "bool" and q.why.value == "enumeration"
+
+    quickfire = [q for q in remaining if is_quickfire(q)]
+
+    # Keep the form's own running order. The address check and the occupancy
+    # question come before the inventory, and leading with the run-through made
+    # the assistant open on the kitchen, which is a strange way to greet someone.
+    first_item = next((i for i, q in enumerate(remaining) if is_quickfire(q)), len(remaining))
+    opening = [q for q in remaining[:first_item] if not is_quickfire(q)]
+    considered = [q for q in remaining[first_item:] if not is_quickfire(q)]
 
     lines = [
         "You are helping a homeowner complete the California Transfer Disclosure "
@@ -83,8 +92,10 @@ def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
         f"Seller: {deal.seller_name}.",
         "",
         "How to talk:",
-        "- One question at a time. Short sentences. No preamble, no recap of what "
-        "they just said unless you are confirming a correction.",
+        "- Short sentences. No preamble, and no recapping what they just said "
+        "unless you are confirming a correction.",
+        "- Ask the quick run-through items a whole group at a time, and the ones "
+        "that need care one at a time. Both lists are below.",
         "- Ask the question in plain language first. Only read the statutory "
         "wording if they ask what the form actually says.",
         "- If they sound unsure, offer the example before offering an answer. "
@@ -98,7 +109,9 @@ def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
         "- Approximate dates are fine. 'A few years ago' is a usable answer.",
         "",
         "Recording answers:",
-        "- Call record_answer as soon as an answer is usable. Do not batch.",
+        "- Call record_answer for each answer as soon as it is usable. If they "
+        "answered five things in one breath, that is five separate calls, made "
+        "straight away - do not wait until the end of the group.",
         "- Only use question ids from the list below.",
         "- Where a question lists options, `value` must be one of the option ids "
         "exactly as written, or a list of them. Never invent an option, and "
@@ -132,23 +145,46 @@ def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
         lines.append("Nothing left to cover: thank them and call finish_section.")
         return "\n".join(lines)
 
+    def describe_all(qs) -> None:
+        for q in qs:
+            lines.extend(describe(q))
+
+    if opening:
+        lines.append("START HERE, one at a time, in this order:")
+        describe_all(opening)
+        lines.append("")
+
     if quickfire:
         lines += [
-            "Quick run-through. These are plain 'does the property have this?' "
-            "questions with no ambiguity. Read them in batches of four or five, "
-            "let the seller answer several at once, and record each one as you "
-            "go. Do not explain these unless asked.",
+            "THEN THE QUICK RUN-THROUGH. Plain 'does the property have this?' items, no "
+            "ambiguity, and there are a lot of them. Read out a whole group in "
+            "one go and let them answer it in one go.",
+            "",
+            "Say it like: \"In the kitchen and laundry - do you have a range, an "
+            "oven, a microwave, a dishwasher, a trash compactor, a garbage "
+            "disposal, washer dryer hookups?\" Then take whatever they say - "
+            "\"range, oven and dishwasher, none of the rest\" - and record every "
+            "item in the group from it, including the ones they said no to.",
+            "",
+            "Anything in the group they did not mention either way, ask once as a "
+            "short follow-up, all together: \"and the microwave and the gazebo?\" "
+            "Do not go item by item, and do not explain these unless asked.",
+            "",
         ]
-        lines += [f"- {q.id}: {q.prompt}" for q in quickfire]
+        by_group: dict[str, list] = {}
+        for q in quickfire:
+            by_group.setdefault(q.group or "Other", []).append(q)
+        for group, items in by_group.items():
+            lines.append(f"{group}:")
+            lines += [f"  - {q.id}: {q.prompt}" for q in items]
         lines.append("")
 
     if considered:
         lines.append(
-            "Questions that need more care. One at a time, and follow up where "
-            "the answer is not yet usable."
+            "AFTER THAT, the questions that need more care. One at a time, and "
+            "follow up where the answer is not yet usable."
         )
-        for q in considered:
-            lines += describe(q)
+        describe_all(considered)
 
     return "\n".join(lines)
 

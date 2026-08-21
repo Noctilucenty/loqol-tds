@@ -490,7 +490,12 @@ def test_the_all_scope_offers_every_unanswered_question():
 
 
 def test_inventory_items_are_batched_rather_than_explained_one_by_one():
-    """66 questions each with context would bury the ones that need it."""
+    """66 questions each with context would bury the ones that need it.
+
+    Asserts the shape rather than the wording: the run-through items appear
+    under their group heading and carry no per-item explanation, which is what
+    lets the assistant read a whole room in one breath.
+    """
     from app.routers.voice_routes import build_instructions
 
     class Deal:
@@ -498,8 +503,19 @@ def test_inventory_items_are_batched_rather_than_explained_one_by_one():
         seller_name = "Dana"
 
     brief = build_instructions(Deal(), {}, "all")
-    assert "Quick run-through" in brief
-    assert len(brief) < 20_000, f"prompt is {len(brief)} chars"
+
+    assert "Kitchen and laundry:" in brief, "run-through is not grouped by room"
+    kitchen = brief[brief.index("Kitchen and laundry:"):]
+    kitchen = kitchen[: kitchen.index("\n\n")] if "\n\n" in kitchen else kitchen
+
+    # The whole group has to be visible together, or it cannot be read at once.
+    for qid in ("A.range", "A.oven", "A.dishwasher", "A.microwave"):
+        assert qid in kitchen, f"{qid} is not listed with the rest of the kitchen"
+
+    # And none of them may carry the explanatory scaffolding the careful
+    # questions get - that is the padding that made it crawl item by item.
+    assert "Explain it as:" not in kitchen
+    assert "Follow up" not in kitchen
 
 
 def test_what_the_live_model_recorded_all_survives_the_write_path():
