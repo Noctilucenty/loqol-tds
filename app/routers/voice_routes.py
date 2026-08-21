@@ -175,10 +175,13 @@ def build_instructions(deal: Deal, answers: dict, scope: str = "voice") -> str:
             "\"the first two and the last one, none of the rest\", and record "
             "every item in the group from it, the noes as well as the yeses.",
             "",
-            "If some items in the group were left genuinely unaddressed, ask "
-            "about just those, together, in one short follow-up. Never invent an "
-            "item that is not on the list, never re-ask one they already "
-            "answered, and do not explain these unless asked.",
+            "\"Unknown\" is for an item they told you they do not know about. It "
+            "is NOT for an item they simply did not mention - those two look the "
+            "same in the recording and mean very different things on a legal "
+            "form. If they skipped some, leave those out of the call and ask "
+            "about just those, together, in one short follow-up: \"and the last "
+            "two?\". Never invent an item that is not on the list, never re-ask "
+            "one they already answered, and do not explain these unless asked.",
             "",
         ]
         by_group: dict[str, list] = {}
@@ -260,6 +263,15 @@ def build_tools(answers: dict, scope: str = "voice") -> list[dict]:
                                 "value": {
                                     "type": "string",
                                     "enum": ["yes", "no", "unknown"],
+                                    "description": (
+                                        "\"unknown\" ONLY where the seller said "
+                                        "they do not know. If they did not "
+                                        "mention this item, or you are not sure "
+                                        "what they meant, leave it out of the "
+                                        "call entirely and ask - do not guess "
+                                        "and do not use \"unknown\" as a "
+                                        "placeholder."
+                                    ),
                                 },
                             },
                             "required": ["id", "value"],

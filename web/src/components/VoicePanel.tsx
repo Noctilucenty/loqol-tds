@@ -64,6 +64,12 @@ export function VoicePanel({
   const wholeForm = scope === "all";
   const responseActive = useRef(false);
   const wantTurn = useRef(false);
+  // Has the seller said anything since the assistant's last turn? Given a tool
+  // that takes a list, the model will happily read out a group and record it in
+  // the same breath, then run on through the rest of the form. Answers nobody
+  // gave do not belong on a disclosure, so a turn in which the seller has not
+  // spoken cannot write.
+  const sellerSpoke = useRef(false);
   onFinishedRef.current = onFinished;
 
   const stop = useCallback(
@@ -82,6 +88,7 @@ export function VoicePanel({
       stream.current = null;
       responseActive.current = false;
       wantTurn.current = false;
+      sellerSpoke.current = false;
       setLevel(0);
       setSecondsLeft(null);
       setPhase("idle");
@@ -133,6 +140,16 @@ export function VoicePanel({
         stop(true);
         return;
       }
+      if (!sellerSpoke.current) {
+        sendToolResult(callId, {
+          ok: false,
+          error:
+            "The seller has not said anything since your last turn. Ask, then " +
+            "wait for their answer. Do not record anything they have not said.",
+        });
+        return;
+      }
+
       // A whole run-through group in one request. Seven separate calls meant
       // seven round-trips before the assistant could speak again, which the
       // seller experiences as several seconds of silence after answering.
@@ -198,6 +215,7 @@ export function VoicePanel({
           break;
         case "conversation.item.input_audio_transcription.completed":
           if (ev.transcript?.trim()) {
+            sellerSpoke.current = true;
             setTurns((t) => [...t, { who: "seller", text: ev.transcript.trim() }]);
           }
           break;
@@ -213,6 +231,9 @@ export function VoicePanel({
           break;
         case "response.done":
           responseActive.current = false;
+          // One utterance may legitimately answer several things, so the gate
+          // clears per turn rather than per recorded answer.
+          sellerSpoke.current = false;
           if (wantTurn.current) {
             wantTurn.current = false;
             requestTurn();
