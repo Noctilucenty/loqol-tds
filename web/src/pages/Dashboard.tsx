@@ -126,7 +126,7 @@ function NewDeal({ onDone, onCancel }: { onDone: () => void; onCancel: () => voi
         <label className="field" style={{ gridColumn: "1 / -1" }}>
           <span>Property address</span>
           <input className="input" required value={f.property_address}
-                 placeholder="1247 Sepulveda Blvd, Culver City, CA 90230"
+                 placeholder="123 Demo Property Ln, Culver City, CA 90230"
                  onChange={set("property_address")} />
         </label>
         <label className="field"><span>City</span>

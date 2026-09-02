@@ -50,7 +50,7 @@ def seller_link(client):
         "email": email, "password": "pytest-only-not-a-real-password", "name": "Alex Marchetti",
     })
     deal = client.post("/api/agent/deals", json={
-        "property_address": "1247 Sepulveda Blvd, Culver City, CA 90230",
+        "property_address": "123 Demo Property Ln, Culver City, CA 90230",
         "city": "Culver City", "county": "Los Angeles",
         "seller_name": "Dana Whitfield", "seller_email": "dana@example.com",
     }).json()

@@ -81,7 +81,7 @@ def demo(response: Response, request: Request, db: Session = Depends(get_db)):
     # Seed one deal so the dashboard is not an empty state on arrival.
     deal = Deal(
         agent_id=agent.id,
-        property_address="1247 Sepulveda Blvd, Culver City, CA 90230",
+        property_address="123 Demo Property Ln, Culver City, CA 90230",
         city="Culver City",
         county="Los Angeles",
         seller_name="Dana Whitfield",

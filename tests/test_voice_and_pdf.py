@@ -89,7 +89,7 @@ def test_voice_is_off_and_says_so_when_unconfigured(client, seller_link):
 
 # -------------------------------------------------------------------- pdf ---
 
-SYSTEM = {"property_address": "1247 Sepulveda Blvd", "disclosure_date": "2026-08-20"}
+SYSTEM = {"property_address": "123 Demo Property Ln", "disclosure_date": "2026-08-20"}
 
 
 def test_the_rendered_pdf_is_flat():
@@ -132,4 +132,4 @@ def test_a_filled_form_reaches_the_page_it_should():
     answers = {"P.occupying": "is", "A.range": True, "C.flooding": "yes"}
     fields, _ = resolve(answers)
     text = PdfReader(io.BytesIO(render(fields, system=SYSTEM))).pages[1].extract_text()
-    assert "1247 Sepulveda Blvd" in text
+    assert "123 Demo Property Ln" in text

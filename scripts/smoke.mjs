@@ -96,7 +96,7 @@ for (let i = 0; i < 70; i++) {
 
   const addr = seller.locator("input.input").first();
   if ((await addr.count()) && heading.includes("right property address")) {
-    await addr.fill("1247 Sepulveda Blvd, Culver City, CA 90230");
+    await addr.fill("123 Demo Property Ln, Culver City, CA 90230");
     await seller.waitForTimeout(900);
   }
   for (const label of ["Yes, I live here", "No"]) {

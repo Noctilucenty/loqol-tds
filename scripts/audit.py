@@ -60,7 +60,7 @@ class Client:
                 return exc.code, {"raw": payload[:200].decode(errors="replace")}
 
 
-ADDRESS = "1247 Sepulveda Blvd, Culver City, CA 90230"
+ADDRESS = "123 Demo Property Ln, Culver City, CA 90230"
 
 
 def main() -> int:
